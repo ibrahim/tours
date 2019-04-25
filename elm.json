@@ -1,23 +1,26 @@
 {
     "type": "application",
     "source-directories": [
-        "src"
+        "src",
+        "elm-mdc/src"
     ],
     "elm-version": "0.19.0",
     "dependencies": {
         "direct": {
+            "debois/elm-dom": "1.3.0",
             "dillonkearns/elm-graphql": "4.2.1",
             "elm/browser": "1.0.1",
             "elm/core": "1.0.2",
             "elm/html": "1.0.0",
+            "elm/http": "2.0.0",
             "elm/json": "1.1.3",
             "elm/regex": "1.0.0",
+            "elm/svg": "1.0.1",
             "elm/time": "1.0.0",
-            "elm/http": "2.0.0",
-            "krisajenkins/remotedata": "6.0.1",
             "elm-community/list-extra": "8.2.0",
-            "ryannhg/date-format": "2.3.0",
-            "lukewestby/elm-string-interpolate": "1.0.3"
+            "krisajenkins/remotedata": "6.0.1",
+            "lukewestby/elm-string-interpolate": "1.0.3",
+            "ryannhg/date-format": "2.3.0"
         },
         "indirect": {
             "Skinney/murmur3": "2.0.8",

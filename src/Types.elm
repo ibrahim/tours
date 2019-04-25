@@ -1,4 +1,31 @@
-module Types exposing (Event(..), Response, Trip, User)
+module Types exposing (Authentication(..), Endpoint, Event(..), EventAttributes, RemoteGraphqlResponse, Response, Trip, User)
+
+import Graphql.Http
+import Graphql.Http.GraphqlError
+import RemoteData exposing (RemoteData)
+
+
+type alias EventAttributes =
+    { uuid : Maybe String
+    , title : String
+    }
+
+
+type alias Email =
+    String
+
+
+type alias Endpoint =
+    String
+
+
+type Authentication
+    = Authenticated Email
+    | Unauthenticated
+
+
+type alias RemoteGraphqlResponse =
+    RemoteData (Graphql.Http.Error Response) Response
 
 
 type alias Response =

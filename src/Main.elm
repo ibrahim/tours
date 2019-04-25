@@ -6,13 +6,16 @@ import Graphql.Document as Document
 import Graphql.Http
 import Graphql.Http.GraphqlError
 import Helpers.Main
-import Html exposing (Html, div, h1, li, p, pre, text, ul)
+import Html exposing (Html, button, div, h1, input, li, p, pre, text, ul)
+import Html.Attributes exposing (value)
+import Html.Events exposing (onClick, onInput)
 import Model exposing (Model)
 import Msg exposing (Msg(..))
+import Mutations
 import PrintAny
 import Queries
 import RemoteData exposing (RemoteData)
-import Types exposing (Event(..), Response, Trip, User)
+import Types exposing (Authentication(..), Event(..), Response, Trip, User)
 
 
 
@@ -25,40 +28,52 @@ type alias Flags =
 
 init : Flags -> ( Model, Cmd Msg )
 init _ =
-    ( RemoteData.Loading, Api.getUserTrips )
+    let
+        model =
+            Model.init
+    in
+    ( model, Api.getUserTrips model.endpoint )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotResponse response ->
-            ( response, Cmd.none )
+            case response of
+                RemoteData.Success { email, trips } ->
+                    ( { model | current_user = Authenticated email, trips = trips }, Cmd.none )
+
+                RemoteData.Failure errorData ->
+                    ( model, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        GotEventResponse response ->
+            ( model, Cmd.none )
+
+        SubmitEvent ->
+            ( model, Mutations.saveEventRequest model.endpoint { uuid = Nothing, title = model.event_title } )
+
+        SetEventTitle title ->
+            ( { model | event_title = title }, Cmd.none )
 
 
 view : Model -> Browser.Document Msg
-view model =
+view { trips, current_user, event_title } =
     { title = "TourFax"
     , body =
-        [ div []
-            [ h1 [] [ text "Generated Query" ]
-            , pre [] [ text (Document.serializeQuery Queries.userTripsQuery) ]
-            ]
-        , case model of
-            RemoteData.Success user ->
-                case user of
-                    { email, trips } ->
-                        div []
-                            [ text email
-                            , ul [] (List.map viewTrip trips)
-                            ]
+        [ case current_user of
+            Authenticated email ->
+                div []
+                    [ text email
+                    , eventForm
+                    , text ("New Event: " ++ event_title)
+                    , ul [] (List.map viewTrip trips)
+                    ]
 
-            RemoteData.Failure errorData ->
-                errorData
-                    |> errorToString
-                    |> text
-
-            _ ->
-                text "Loading..."
+            Unauthenticated ->
+                text "Unauthenticated"
         ]
     }
 
@@ -68,6 +83,13 @@ viewTrip { name, events } =
     li []
         [ text name
         , ul [] (List.map viewEvent events)
+        ]
+
+
+eventForm =
+    div []
+        [ input [ onInput SetEventTitle ] []
+        , button [ onClick SubmitEvent ] [ text "New Event" ]
         ]
 
 

@@ -1,4 +1,4 @@
-module Queries exposing (userTripsQuery)
+module Queries exposing (eventsSelection, userTripsQuery)
 
 import Graphql.Operation exposing (RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, hardcoded, with)

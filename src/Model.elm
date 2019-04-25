@@ -1,4 +1,4 @@
-module Model exposing (Model)
+module Model exposing (Model, init)
 
 import Graphql.Http
 import Graphql.Http.GraphqlError
@@ -7,4 +7,18 @@ import Types exposing (..)
 
 
 type alias Model =
-    RemoteData (Graphql.Http.Error Response) Response
+    { userTrips : RemoteGraphqlResponse
+    , current_user : Authentication
+    , trips : List Trip
+    , event_title : String
+    , endpoint : Endpoint
+    }
+
+
+init =
+    { current_user = Unauthenticated
+    , trips = []
+    , userTrips = RemoteData.Loading
+    , event_title = ""
+    , endpoint = "http://localhost:5555/graphql"
+    }

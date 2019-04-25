@@ -5,11 +5,12 @@ import Graphql.Http.GraphqlError
 import Msg exposing (Msg(..))
 import Queries
 import RemoteData exposing (RemoteData)
+import Types exposing (Endpoint)
 
 
-getUserTrips : Cmd Msg
-getUserTrips =
+getUserTrips : Endpoint -> Cmd Msg
+getUserTrips endpoint =
     Queries.userTripsQuery
         |> Graphql.Http.queryRequest
-            "http://localhost:5555/graphql"
+            endpoint
         |> Graphql.Http.send (RemoteData.fromResult >> GotResponse)
