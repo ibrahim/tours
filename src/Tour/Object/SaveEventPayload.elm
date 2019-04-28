@@ -31,6 +31,6 @@ errors =
     Object.selectionForField "(Maybe String)" "errors" [] (Decode.string |> Decode.nullable)
 
 
-event : SelectionSet decodesTo Tour.Union.Event -> SelectionSet (Maybe decodesTo) Tour.Object.SaveEventPayload
+event : SelectionSet decodesTo Tour.Union.Event -> SelectionSet decodesTo Tour.Object.SaveEventPayload
 event object_ =
-    Object.selectionForCompositeField "event" [] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "event" [] object_ identity

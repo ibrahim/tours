@@ -3,13 +3,14 @@ module Mutations exposing (saveEventRequest)
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, hardcoded, with)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet(..), hardcoded, with)
 import Msg exposing (Msg(..))
 import Queries
 import RemoteData exposing (RemoteData)
 import Tour.InputObject exposing (SaveEventInput, buildSaveEventInput)
 import Tour.Mutation as Mutation exposing (SaveEventRequiredArguments)
-import Tour.Object.SaveEventPayload exposing (event)
+import Tour.Object
+import Tour.Object.SaveEventPayload as SaveEventPayload exposing (event)
 import Types exposing (Endpoint, Event(..), EventAttributes)
 
 
