@@ -15,6 +15,7 @@ type Route
     = Home
     | Root
     | Planner
+    | Login
 
 
 parser : Parser (Route -> a) a
@@ -22,6 +23,7 @@ parser =
     oneOf
         [ Parser.map Home Parser.top
         , Parser.map Planner (s "planner")
+        , Parser.map Login (s "login")
         ]
 
 
@@ -66,5 +68,8 @@ routeToString page =
 
                 Planner ->
                     [ "planner" ]
+
+                Login ->
+                    [ "login" ]
     in
     "#/" ++ String.join "/" pieces

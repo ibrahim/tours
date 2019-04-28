@@ -1,6 +1,6 @@
 module Main exposing (main)
 
-import Api
+import Api exposing (application)
 import Browser
 import Browser.Navigation as Nav
 import Graphql.Document as Document
@@ -10,15 +10,21 @@ import Helpers.Main
 import Html exposing (Html, button, div, h1, input, li, p, pre, text, ul)
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
+import Json.Decode as Decode exposing (Value)
 import Mutations
-import Page.Home as Home exposing (Model, Msg(..), init, initial_state)
+import Page exposing (Page(..))
+import Page.Blank as Blank exposing (view)
+import Page.Home as Home exposing (Model, Msg(..), init)
+import Page.Login as Login exposing (Model, Msg(..), init)
+import Page.NotFound as NotFound
 import Page.Planner as Planner exposing (Model, Msg(..), init)
 import Queries
 import RemoteData exposing (RemoteData)
 import Route exposing (Route(..))
-import Session exposing (Session(..), navKey)
+import Session exposing (Session(..), fromViewer, navKey)
 import Types exposing (Authentication(..), Event(..), Response, Trip, User)
 import Url exposing (Url)
+import Viewer exposing (Viewer)
 
 
 
@@ -28,6 +34,8 @@ import Url exposing (Url)
 type Model
     = Planner Planner.Model
     | Home Home.Model
+    | Login Login.Model
+    | NotFound Session
     | Redirect Session
 
 
@@ -37,11 +45,13 @@ type Model
 
 
 type Msg
-    = ChangedRoute (Maybe Route)
+    = Ignored
+    | ChangedRoute (Maybe Route)
     | ChangedUrl Url
     | ClickedLink Browser.UrlRequest
     | GotPlannerMsg Planner.Msg
     | GotHomeMsg Home.Msg
+    | GotLoginMsg Login.Msg
 
 
 
@@ -52,14 +62,10 @@ type alias Flags =
     ()
 
 
-init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init flags url key =
+init : Maybe Viewer -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init maybeViewer url navKey =
     changeRouteTo (Route.fromUrl url)
-        (Redirect (Guest url key))
-
-
-
--- changeRouteTo (Route.fromUrl url) (Home Home.initial_state)
+        (Redirect (Session.fromViewer navKey maybeViewer))
 
 
 toSession : Model -> Session
@@ -68,11 +74,17 @@ toSession model =
         Redirect session ->
             session
 
+        NotFound session ->
+            session
+
         Home subModel ->
             Home.toSession subModel
 
         Planner subModel ->
             Planner.toSession subModel
+
+        Login subModel ->
+            Login.toSession subModel
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -100,9 +112,19 @@ update msg model =
             Home.update subMsg subModel
                 |> updateWith Home GotHomeMsg model
 
+        ( GotLoginMsg subMsg, Login subModel ) ->
+            Login.update subMsg subModel
+                |> updateWith Login GotLoginMsg model
+
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page.
             ( model, Cmd.none )
+
+
+
+-- ( _, _ ) ->
+--     -- Disregard messages that arrived for the wrong page.
+--     ( model, Cmd.none )
 
 
 updateWith : (subModel -> Model) -> (subMsg -> Msg) -> Model -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
@@ -121,20 +143,20 @@ view model =
             }
     in
     case model of
+        Redirect _ ->
+            viewPage (\_ -> Ignored) Blank.view
+
+        NotFound _ ->
+            viewPage (\_ -> Ignored) NotFound.view
+
+        Login login ->
+            viewPage GotLoginMsg (Login.view login)
+
         Planner planner ->
             viewPage GotPlannerMsg (Planner.view planner)
 
         Home home ->
             viewPage GotHomeMsg (Home.view home)
-
-        _ ->
-            { title = "Page Not Found"
-            , body =
-                [ div []
-                    [ text "Page Not Found"
-                    ]
-                ]
-            }
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -159,6 +181,10 @@ changeRouteTo maybeRoute model =
             Home.init (toSession model)
                 |> updateWith Home GotHomeMsg model
 
+        Just Route.Login ->
+            Login.init (toSession model)
+                |> updateWith Login GotLoginMsg model
+
 
 
 -- SUBSCRIPTIONS
@@ -173,17 +199,23 @@ subscriptions model =
         Home home ->
             Sub.map GotHomeMsg (Home.subscriptions home)
 
-        _ ->
+        Login login ->
+            Sub.map GotLoginMsg (Login.subscriptions login)
+
+        NotFound _ ->
+            Sub.none
+
+        Redirect _ ->
             Sub.none
 
 
-main : Program Flags Model Msg
+main : Program Value Model Msg
 main =
-    Browser.application
+    Api.application Viewer.decoder
         { init = init
-        , update = update
-        , subscriptions = subscriptions
-        , view = view
         , onUrlChange = ChangedUrl
         , onUrlRequest = ClickedLink
+        , subscriptions = subscriptions
+        , update = update
+        , view = view
         }
