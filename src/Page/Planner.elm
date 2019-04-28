@@ -1,4 +1,4 @@
-module Page.Planner exposing (Model, Msg(..), getUserTrips, init, subscriptions, update, view)
+module Page.Planner exposing (Model, Msg(..), getUserTrips, init, subscriptions, toSession, update, view)
 
 import Api
 import Browser
@@ -8,8 +8,10 @@ import Html exposing (Html, button, div, h1, input, li, p, pre, text, ul)
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
 import Mutations
+import Page exposing (header)
 import PrintAny
 import RemoteData exposing (RemoteData)
+import Session exposing (Session(..))
 import Types exposing (..)
 
 
@@ -30,11 +32,11 @@ type Msg
 
 
 type alias Model =
-    { userTrips : RemoteGraphqlResponse
+    { session : Session
+    , userTrips : RemoteGraphqlResponse
     , current_user : Authentication
     , trips : List Trip
     , event_title : String
-    , endpoint : Endpoint
     }
 
 
@@ -43,13 +45,19 @@ type alias Model =
 -- init {{{
 
 
-init =
-    { current_user = Unauthenticated
+initial_state : Session -> Model
+initial_state session =
+    { session = session
+    , current_user = Unauthenticated
     , trips = []
     , userTrips = RemoteData.Loading
     , event_title = ""
-    , endpoint = "http://localhost:5555/graphql"
     }
+
+
+init : Session -> ( Model, Cmd Msg )
+init session =
+    ( initial_state session, getUserTrips )
 
 
 
@@ -71,7 +79,7 @@ update msg model =
                     ( model, Cmd.none )
 
         SubmitEvent ->
-            ( model, saveEvent model.endpoint { uuid = Nothing, title = model.event_title } )
+            ( model, saveEvent Api.endpoint { uuid = Nothing, title = model.event_title } )
 
         SetEventTitle title ->
             ( { model | event_title = title }, Cmd.none )
@@ -89,7 +97,8 @@ view : Model -> { title : String, content : List (Html Msg) }
 view { trips, current_user, event_title } =
     { title = "TourFax"
     , content =
-        [ case current_user of
+        [ div [] [ Page.header "Planner" ]
+        , case current_user of
             Authenticated email ->
                 div []
                     [ text email
@@ -187,9 +196,9 @@ saveEvent endpoint event =
         |> Graphql.Http.send (RemoteData.fromResult >> GotEventResponse)
 
 
-getUserTrips : Endpoint -> Cmd Msg
-getUserTrips endpoint =
-    Api.getUserTrips endpoint
+getUserTrips : Cmd Msg
+getUserTrips =
+    Api.getUserTrips
         |> Graphql.Http.send (RemoteData.fromResult >> GotResponse)
 
 
@@ -205,3 +214,8 @@ subscriptions model =
 
 
 -- Sub Msg }}}
+
+
+toSession : Model -> Session
+toSession model =
+    model.session
