@@ -1,10 +1,11 @@
 module Mutations exposing (saveEventRequest)
 
+-- import Page.Planner exposing (Msg(..))
+
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet(..), hardcoded, with)
-import Msg exposing (Msg(..))
 import Queries
 import RemoteData exposing (RemoteData)
 import Tour.InputObject exposing (SaveEventInput, buildSaveEventInput)
@@ -28,8 +29,7 @@ saveEventMutation { title } =
 -- |> SelectionSet.map (\event -> case event of Just event -> event Nothing -> )
 
 
-saveEventRequest : Endpoint -> EventAttributes -> Cmd Msg
+saveEventRequest : Endpoint -> EventAttributes -> Graphql.Http.Request (Maybe Event)
 saveEventRequest endpoint event =
     saveEventMutation event
         |> Graphql.Http.mutationRequest endpoint
-        |> Graphql.Http.send (RemoteData.fromResult >> GotEventResponse)
