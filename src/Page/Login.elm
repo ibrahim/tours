@@ -306,18 +306,22 @@ login (Trimmed form) =
                 , ( "password", Encode.string form.password )
                 ]
 
-        loginRequest body_ decoder_ =
+        loginRequest requestBody =
             Http.post
                 { url = Api.loginEndpoint
-                , body = body_
-                , expect = Api.expectJson CompletedLogin (Decode.field "user" (Api.decoderFromCred decoder_))
+                , body = requestBody
+                , expect = Api.expectJson CompletedLogin loginResponseDecoder
                 }
 
         body =
             Encode.object [ ( "user", user ) ]
                 |> Http.jsonBody
     in
-    loginRequest body Viewer.decoder
+    loginRequest body
+
+
+loginResponseDecoder =
+    Decode.field "user" (Api.decoderFromCred Viewer.decoder)
 
 
 
