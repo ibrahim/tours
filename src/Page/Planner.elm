@@ -9,11 +9,12 @@ import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
 import Mutations
 import Page exposing (header)
-import PrintAny
 import Queries
 import RemoteData exposing (RemoteData)
-import Session exposing (Session(..))
+import Session exposing (Session(..), viewer)
+import Token exposing (toString)
 import Types exposing (..)
+import Viewer exposing (cred, token)
 
 
 
@@ -58,7 +59,7 @@ initial_state session =
 
 init : Session -> ( Model, Cmd Msg )
 init session =
-    ( initial_state session, getUserTrips )
+    ( initial_state session, getUserTrips session )
 
 
 
@@ -161,14 +162,6 @@ title_with_price title price =
     li [] [ text title, text <| String.fromInt <| Maybe.withDefault 0 price ]
 
 
-successView : Response -> Html Msg
-successView successData =
-    div []
-        [ h1 [] [ text "Response" ]
-        , successData |> PrintAny.view
-        ]
-
-
 errorToString : Graphql.Http.Error parsedData -> String
 errorToString errorData =
     case errorData of
@@ -197,11 +190,26 @@ saveEvent event =
         |> Graphql.Http.send (RemoteData.fromResult >> GotEventResponse)
 
 
-getUserTrips : Cmd Msg
-getUserTrips =
-    Queries.userTripsQuery
-        |> Graphql.Http.queryRequest Api.endpoint
-        |> Graphql.Http.send (RemoteData.fromResult >> GotResponse)
+getUserTrips : Session -> Cmd Msg
+getUserTrips session =
+    let
+        cred =
+            case Session.viewer session of
+                Just viewer ->
+                    Just (Viewer.cred viewer)
+
+                Nothing ->
+                    Nothing
+    in
+    case cred of
+        Just cred_ ->
+            Queries.userTripsQuery
+                |> Graphql.Http.queryRequest Api.endpoint
+                |> Graphql.Http.withHeader "authorization" ("Bearer " ++ Token.toString (Viewer.token cred_))
+                |> Graphql.Http.send (RemoteData.fromResult >> GotResponse)
+
+        Nothing ->
+            Cmd.none
 
 
 

@@ -6,7 +6,6 @@ import Browser.Navigation as Nav
 import Graphql.Document as Document
 import Graphql.Http
 import Graphql.Http.GraphqlError
-import Helpers.Main
 import Html exposing (Html, button, div, h1, input, li, p, pre, text, ul)
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)

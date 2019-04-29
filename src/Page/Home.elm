@@ -9,7 +9,6 @@ import Html.Attributes exposing (href, value)
 import Html.Events exposing (onClick, onInput)
 import Mutations
 import Page exposing (header)
-import PrintAny
 import RemoteData exposing (RemoteData)
 import Session exposing (Session(..))
 import Types exposing (..)

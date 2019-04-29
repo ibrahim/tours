@@ -5,6 +5,7 @@ module Page.Login exposing (Model, Msg, init, subscriptions, toSession, update, 
 
 import Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred, expectJson)
 import Browser.Navigation as Nav
+import Dict exposing (Dict(..), get)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -25,6 +26,7 @@ import Viewer exposing (Viewer)
 type alias Model =
     { session : Session
     , problems : List Problem
+    , viewer : Maybe Viewer
     , form : Form
     }
 
@@ -49,6 +51,7 @@ init : Session -> ( Model, Cmd msg )
 init session =
     ( { session = session
       , problems = []
+      , viewer = Nothing
       , form =
             { email = ""
             , password = ""
@@ -180,8 +183,8 @@ update msg model =
                         BadUrl _ ->
                             [ ServerError "Login Request: bad url" ]
 
-                        BadBody _ ->
-                            [ ServerError "Login Request:  unable to decode login response" ]
+                        BadBody err ->
+                            [ ServerError ("Login Request:  unable to decode login response" ++ err) ]
 
                 -- Api.decodeErrors error
                 --     |> List.map ServerError
@@ -191,7 +194,7 @@ update msg model =
             )
 
         CompletedLogin (Ok (ApiResponse viewer headers)) ->
-            ( model
+            ( { model | viewer = Just viewer }
             , Viewer.store viewer
             )
 

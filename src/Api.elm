@@ -1,4 +1,4 @@
-port module Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred(..), application, decoderFromCred, endpoint, expectJson, loginEndpoint, storeCredWith, username, viewerChanges)
+port module Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred(..), application, credDecoder, decoderFromCred, endpoint, expectJson, loginEndpoint, storeCredWith, username, viewerChanges)
 
 import Avatar exposing (Avatar(..))
 import Browser
@@ -8,6 +8,7 @@ import Http exposing (Error(..), Expect, Response(..))
 import Json.Decode as Decode exposing (Decoder, Value, decodeString, errorToString, field, string)
 import Json.Decode.Pipeline as Pipeline exposing (optional, required)
 import Json.Encode as Encode
+import Token exposing (Token)
 import Types exposing (Endpoint, Response, Trip)
 import Url exposing (Url)
 import Username exposing (Username)
@@ -24,7 +25,7 @@ loginEndpoint =
 
 
 type Cred
-    = Cred Username String
+    = Cred Username Token
 
 
 username : Cred -> Username
@@ -33,8 +34,8 @@ username (Cred val _) =
 
 
 credHeader : Cred -> Http.Header
-credHeader (Cred _ str) =
-    Http.header "authorization" ("Token " ++ str)
+credHeader (Cred _ token) =
+    Http.header "authorization" ("Token " ++ Token.toString token)
 
 
 decoderFromCred : Decoder (Cred -> a) -> Decoder a
@@ -55,7 +56,7 @@ credDecoder : Decoder Cred
 credDecoder =
     Decode.succeed Cred
         |> required "username" Username.decoder
-        |> required "token" Decode.string
+        |> required "token" Token.decoder
 
 
 
@@ -85,7 +86,7 @@ storeCredWith (Cred uname token) avatar =
                 [ ( "user"
                   , Encode.object
                         [ ( "username", Username.encode uname )
-                        , ( "token", Encode.string token )
+                        , ( "token", Token.encode token )
                         , ( "image", Avatar.encode avatar )
                         ]
                   )
