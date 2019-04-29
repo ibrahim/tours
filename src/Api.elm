@@ -1,17 +1,13 @@
-port module Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred(..), application, decoderFromCred, endpoint, expectJson, getUserTrips, loginEndpoint, storeCredWith, username, viewerChanges)
+port module Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred(..), application, decoderFromCred, endpoint, expectJson, loginEndpoint, storeCredWith, username, viewerChanges)
 
 import Avatar exposing (Avatar(..))
 import Browser
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
-import Graphql.Http
-import Graphql.Http.GraphqlError
 import Http exposing (Error(..), Expect, Response(..))
 import Json.Decode as Decode exposing (Decoder, Value, decodeString, errorToString, field, string)
 import Json.Decode.Pipeline as Pipeline exposing (optional, required)
 import Json.Encode as Encode
-import Queries
-import RemoteData exposing (RemoteData)
 import Types exposing (Endpoint, Response, Trip)
 import Url exposing (Url)
 import Username exposing (Username)
@@ -39,12 +35,6 @@ username (Cred val _) =
 credHeader : Cred -> Http.Header
 credHeader (Cred _ str) =
     Http.header "authorization" ("Token " ++ str)
-
-
-getUserTrips : Graphql.Http.Request Response
-getUserTrips =
-    Queries.userTripsQuery
-        |> Graphql.Http.queryRequest endpoint
 
 
 decoderFromCred : Decoder (Cred -> a) -> Decoder a

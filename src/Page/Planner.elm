@@ -10,6 +10,7 @@ import Html.Events exposing (onClick, onInput)
 import Mutations
 import Page exposing (header)
 import PrintAny
+import Queries
 import RemoteData exposing (RemoteData)
 import Session exposing (Session(..))
 import Types exposing (..)
@@ -79,7 +80,7 @@ update msg model =
                     ( model, Cmd.none )
 
         SubmitEvent ->
-            ( model, saveEvent Api.endpoint { uuid = Nothing, title = model.event_title } )
+            ( model, saveEvent { uuid = Nothing, title = model.event_title } )
 
         SetEventTitle title ->
             ( { model | event_title = title }, Cmd.none )
@@ -190,15 +191,16 @@ graphqlErrorToString error =
 -- Cmd Msg {{{
 
 
-saveEvent : Endpoint -> EventAttributes -> Cmd Msg
-saveEvent endpoint event =
-    Mutations.saveEventRequest endpoint event
+saveEvent : EventAttributes -> Cmd Msg
+saveEvent event =
+    Mutations.saveEventRequest Api.endpoint event
         |> Graphql.Http.send (RemoteData.fromResult >> GotEventResponse)
 
 
 getUserTrips : Cmd Msg
 getUserTrips =
-    Api.getUserTrips
+    Queries.userTripsQuery
+        |> Graphql.Http.queryRequest Api.endpoint
         |> Graphql.Http.send (RemoteData.fromResult >> GotResponse)
 
 
