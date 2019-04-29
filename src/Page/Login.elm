@@ -3,7 +3,7 @@ module Page.Login exposing (Model, Msg, init, subscriptions, toSession, update, 
 {-| The login page.
 -}
 
-import Api exposing (Cred)
+import Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred, expectJson)
 import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -134,7 +134,7 @@ type Msg
     = SubmittedForm
     | EnteredEmail String
     | EnteredPassword String
-    | CompletedLogin (Result Http.Error Viewer)
+    | CompletedLogin (Result ApiError (ApiResponse Viewer))
     | GotSession Session
 
 
@@ -167,7 +167,21 @@ update msg model =
         CompletedLogin (Err error) ->
             let
                 serverErrors =
-                    [ ServerError "server error" ]
+                    case error of
+                        ErrorMessage metadata body ->
+                            [ ServerError body ]
+
+                        Timeout ->
+                            [ ServerError "Login Request Timeout" ]
+
+                        NetworkError ->
+                            [ ServerError "Network Error while Login" ]
+
+                        BadUrl _ ->
+                            [ ServerError "Login Request: bad url" ]
+
+                        BadBody _ ->
+                            [ ServerError "Login Request:  unable to decode login response" ]
 
                 -- Api.decodeErrors error
                 --     |> List.map ServerError
@@ -176,7 +190,7 @@ update msg model =
             , Cmd.none
             )
 
-        CompletedLogin (Ok viewer) ->
+        CompletedLogin (Ok (ApiResponse viewer headers)) ->
             ( model
             , Viewer.store viewer
             )
@@ -296,7 +310,7 @@ login (Trimmed form) =
             Http.post
                 { url = Api.loginEndpoint
                 , body = body_
-                , expect = Http.expectJson CompletedLogin (Decode.field "user" (Api.decoderFromCred decoder_))
+                , expect = Api.expectJson CompletedLogin (Decode.field "user" (Api.decoderFromCred decoder_))
                 }
 
         body =

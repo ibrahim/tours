@@ -1,8 +1,9 @@
-port module Api exposing (Cred(..), application, decoderFromCred, endpoint, getUserTrips, loginEndpoint, storeCredWith, username, viewerChanges)
+port module Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred(..), application, decoderFromCred, endpoint, expectJson, getUserTrips, loginEndpoint, storeCredWith, username, viewerChanges)
 
 import Avatar exposing (Avatar(..))
 import Browser
 import Browser.Navigation as Nav
+import Dict exposing (Dict)
 import Graphql.Http
 import Graphql.Http.GraphqlError
 import Http exposing (Error(..), Expect, Response(..))
@@ -170,27 +171,43 @@ application viewerDecoder config =
         }
 
 
-expectJson : (Result Http.Error a -> msg) -> Decode.Decoder a -> Expect msg
+type ApiError
+    = BadUrl String
+    | Timeout
+    | NetworkError
+    | ErrorMessage Http.Metadata String
+    | BadBody String
+
+
+type ApiResponse a
+    = ApiResponse a ApiHeaders
+
+
+type alias ApiHeaders =
+    Dict.Dict String String
+
+
+expectJson : (Result ApiError (ApiResponse a) -> msg) -> Decode.Decoder a -> Expect msg
 expectJson toMsg decoder =
     Http.expectStringResponse toMsg <|
         \response ->
             case response of
                 Http.BadUrl_ url ->
-                    Err (Http.BadUrl url)
+                    Err (BadUrl url)
 
                 Http.Timeout_ ->
-                    Err Http.Timeout
+                    Err Timeout
 
                 Http.NetworkError_ ->
-                    Err Http.NetworkError
+                    Err NetworkError
 
                 Http.BadStatus_ metadata body ->
-                    Err (Http.BadStatus metadata.statusCode)
+                    Err (ErrorMessage metadata body)
 
                 Http.GoodStatus_ metadata body ->
                     case Decode.decodeString decoder body of
                         Ok value ->
-                            Ok value
+                            Ok (ApiResponse value metadata.headers)
 
                         Err err ->
                             Err (BadBody (Decode.errorToString err))
