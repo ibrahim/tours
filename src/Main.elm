@@ -172,8 +172,8 @@ changeRouteTo maybeRoute model =
             in
             ( model, Route.replaceUrl key Route.Home )
 
-        Just Route.Planner ->
-            Planner.init (toSession model)
+        Just (Route.Planner uuid) ->
+            Planner.init (toSession model) uuid
                 |> updateWith Planner GotPlannerMsg model
 
         Just Route.Home ->

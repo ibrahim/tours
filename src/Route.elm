@@ -5,6 +5,7 @@ import Html exposing (Attribute)
 import Html.Attributes as Attr
 import Url exposing (Url)
 import Url.Parser as Parser exposing ((</>), Parser, oneOf, s, string)
+import Uuid exposing (Uuid, urlParser)
 
 
 
@@ -14,7 +15,7 @@ import Url.Parser as Parser exposing ((</>), Parser, oneOf, s, string)
 type Route
     = Home
     | Root
-    | Planner
+    | Planner Uuid
     | Login
 
 
@@ -22,13 +23,12 @@ parser : Parser (Route -> a) a
 parser =
     oneOf
         [ Parser.map Home Parser.top
-        , Parser.map Planner (s "planner")
+        , Parser.map Planner (s "planner" </> Uuid.urlParser)
         , Parser.map Login (s "login")
         ]
 
 
 
--- , Parser.map Article (s "article" </> Slug.urlParser)
 -- PUBLIC HELPERS
 
 
@@ -66,8 +66,8 @@ routeToString page =
                 Root ->
                     []
 
-                Planner ->
-                    [ "planner" ]
+                Planner uuid ->
+                    [ "planner", Uuid.toString uuid ]
 
                 Login ->
                     [ "login" ]

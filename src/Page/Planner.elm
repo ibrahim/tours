@@ -1,12 +1,13 @@
-module Page.Planner exposing (Model, Msg(..), getUserTrips, init, subscriptions, toSession, update, view)
+module Page.Planner exposing (Model, Msg(..), init, subscriptions, toSession, update, view)
 
 import Api
 import Browser
 import Graphql.Http
 import Graphql.Http.GraphqlError
-import Html exposing (Html, button, div, h1, input, li, p, pre, text, ul)
+import Html exposing (Html, button, div, h1, input, li, option, p, pre, select, text, ul)
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
+import Http
 import Mutations
 import Page exposing (header)
 import Queries
@@ -14,18 +15,27 @@ import RemoteData exposing (RemoteData)
 import Session exposing (Session(..), viewer)
 import Token exposing (toString)
 import Types exposing (..)
-import Viewer exposing (cred, token)
+import Username exposing (toString)
+import Uuid exposing (Uuid, toString)
+import Viewer exposing (cred, tokenStr, username)
 
 
 
 -- Msg {{{
+-- | GotEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
 
 
 type Msg
-    = GotResponse (RemoteData (Graphql.Http.Error User) User)
-    | GotEventResponse (RemoteData (Graphql.Http.Error (Maybe Event)) (Maybe Event))
+    = GotUserTripResponse (RemoteData (Graphql.Http.Error UserTrip) UserTrip)
+    | GotEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
     | SetEventTitle String
+    | SetEventType String
+    | ReportProblem Problem
     | SubmitEvent
+
+
+type Problem
+    = Problem String
 
 
 
@@ -35,10 +45,11 @@ type Msg
 
 type alias Model =
     { session : Session
-    , userTrips : RemoteGraphqlResponse
-    , current_user : Authentication
-    , trips : List Trip
+    , trip : RemoteData (Graphql.Http.Error UserTrip) UserTrip
+    , trip_id : Uuid
     , event_title : String
+    , event_type : String
+    , problems : List Problem
     }
 
 
@@ -47,19 +58,32 @@ type alias Model =
 -- init {{{
 
 
-initial_state : Session -> Model
-initial_state session =
+event_types : List String
+event_types =
+    [ "Event::Activity"
+    , "Event::Lodging"
+    , "Event::Flight"
+    , "Event::Transportation"
+    , "Event::Cruise"
+    , "Event::Information"
+    , "Event::Dining"
+    ]
+
+
+initial_state : Session -> Uuid -> Model
+initial_state session uuid =
     { session = session
-    , current_user = Unauthenticated
-    , trips = []
-    , userTrips = RemoteData.Loading
+    , trip = RemoteData.Loading
+    , trip_id = uuid
     , event_title = ""
+    , event_type = ""
+    , problems = []
     }
 
 
-init : Session -> ( Model, Cmd Msg )
-init session =
-    ( initial_state session, getUserTrips session )
+init : Session -> Uuid -> ( Model, Cmd Msg )
+init session uuid =
+    ( initial_state session uuid, getUserTrip session uuid )
 
 
 
@@ -69,25 +93,43 @@ init session =
 
 update msg model =
     case msg of
-        GotResponse response ->
-            case response of
-                RemoteData.Success { email, trips } ->
-                    ( { model | current_user = Authenticated email, trips = trips }, Cmd.none )
-
-                RemoteData.Failure errorData ->
-                    ( model, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
+        GotUserTripResponse response ->
+            ( { model | trip = response }, Cmd.none )
 
         SubmitEvent ->
-            ( model, saveEvent { uuid = Nothing, title = model.event_title } )
+            ( model, saveEvent { uuid = Nothing, title = model.event_title, event_type = model.event_type } model.session model.trip_id )
 
         SetEventTitle title ->
             ( { model | event_title = title }, Cmd.none )
 
+        SetEventType typ_ ->
+            ( { model | event_type = typ_ }, Cmd.none )
+
         GotEventResponse response ->
-            ( model, Cmd.none )
+            case response of
+                RemoteData.Failure error ->
+                    case error of
+                        -- Graphql Error
+                        Graphql.Http.GraphqlError possiblyParsedData errors ->
+                            case List.map (\o -> o.message) errors |> List.head of
+                                Just problem ->
+                                    ( { model | problems = [ Problem problem ] }, Cmd.none )
+
+                                Nothing ->
+                                    ( model, Cmd.none )
+
+                        -- Http Error
+                        Graphql.Http.HttpError httpError ->
+                            ( { model | problems = [ Problem (Debug.toString httpError) ] }, Cmd.none )
+
+                RemoteData.Success (Just data) ->
+                    ( { model | trip = RemoteData.map (always data) model.trip }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        ReportProblem problem ->
+            ( { model | problems = [ problem ] }, Cmd.none )
 
 
 
@@ -96,36 +138,63 @@ update msg model =
 
 
 view : Model -> { title : String, content : List (Html Msg) }
-view { trips, current_user, event_title } =
+view { trip, session, event_title, problems } =
     { title = "TourFax"
     , content =
         [ div [] [ Page.header "Planner" ]
-        , case current_user of
-            Authenticated email ->
+        , case session of
+            LoggedIn _ viewer ->
                 div []
-                    [ text email
+                    [ text (Username.toString (Viewer.username viewer))
+                    , showProblem problems
                     , eventForm
                     , text ("New Event: " ++ event_title)
-                    , ul [] (List.map viewTrip trips)
+                    , ul [] [ viewUserTrips trip ]
                     ]
 
-            Unauthenticated ->
+            Guest _ ->
                 text "Unauthenticated"
         ]
     }
 
 
-viewTrip : Trip -> Html msg
-viewTrip { name, events } =
+showProblem problems =
+    ul [] (List.map viewProblem problems)
+
+
+viewProblem (Problem problem) =
+    li [] [ text problem ]
+
+
+viewUserTrips trip =
+    case trip of
+        RemoteData.Success user ->
+            li []
+                [ text user.email
+                , ul [] (List.map viewTrip user.trips)
+                ]
+
+        RemoteData.Failure error ->
+            p [] [ text ("Http error " ++ Debug.toString error) ]
+
+        RemoteData.NotAsked ->
+            li [] [ text "Initializing.." ]
+
+        RemoteData.Loading ->
+            li [] [ text "Loading.." ]
+
+
+viewTrip trip =
     li []
-        [ text name
-        , ul [] (List.map viewEvent events)
+        [ text trip.name
+        , ul [] (List.map viewEvent trip.events)
         ]
 
 
 eventForm =
     div []
         [ input [ onInput SetEventTitle ] []
+        , select [ onInput SetEventType ] (List.map (\o -> option [ value o ] [ text (String.replace "Event::" "" o) ]) event_types)
         , button [ onClick SubmitEvent ] [ text "New Event" ]
         ]
 
@@ -184,31 +253,32 @@ graphqlErrorToString error =
 -- Cmd Msg {{{
 
 
-saveEvent : EventAttributes -> Cmd Msg
-saveEvent event =
-    Mutations.saveEventRequest Api.endpoint event
-        |> Graphql.Http.send (RemoteData.fromResult >> GotEventResponse)
+saveEvent : EventAttributes -> Session -> Uuid -> Cmd Msg
+saveEvent event session trip_id =
+    case session of
+        LoggedIn _ viewer ->
+            Mutations.saveEventRequest Api.endpoint event trip_id
+                |> Graphql.Http.withHeader "authorization" ("Bearer " ++ Viewer.tokenStr viewer)
+                |> Graphql.Http.send
+                    (RemoteData.fromResult
+                        >> GotEventResponse
+                    )
+
+        Guest _ ->
+            Cmd.none
 
 
-getUserTrips : Session -> Cmd Msg
-getUserTrips session =
-    let
-        cred =
-            case Session.viewer session of
-                Just viewer ->
-                    Just (Viewer.cred viewer)
-
-                Nothing ->
-                    Nothing
-    in
-    case cred of
-        Just cred_ ->
-            Queries.userTripsQuery
+getUserTrip : Session -> Uuid -> Cmd Msg
+getUserTrip session uuid =
+    case session of
+        LoggedIn _ viewer ->
+            Queries.userTripQuery uuid
                 |> Graphql.Http.queryRequest Api.endpoint
-                |> Graphql.Http.withHeader "authorization" ("Bearer " ++ Token.toString (Viewer.token cred_))
-                |> Graphql.Http.send (RemoteData.fromResult >> GotResponse)
+                |> Graphql.Http.withHeader "authorization" ("Bearer " ++ Viewer.tokenStr viewer)
+                |> Graphql.Http.send
+                    (RemoteData.fromResult >> GotUserTripResponse)
 
-        Nothing ->
+        Guest _ ->
             Cmd.none
 
 

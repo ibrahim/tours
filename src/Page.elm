@@ -21,7 +21,6 @@ header title =
             [ h1 [] [ text title ]
             , li []
                 [ a [ href "#/" ] [ text "Home" ]
-                , a [ href "#/planner" ] [ text "Tour Planner" ]
                 , a [ href "#/login" ] [ text "login" ]
                 ]
             ]

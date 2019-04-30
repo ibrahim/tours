@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Object.SaveEventPayload exposing (clientMutationId, errors, event)
+module Tour.Object.SaveEventPayload exposing (clientMutationId, errors, user)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -31,6 +31,6 @@ errors =
     Object.selectionForField "(Maybe String)" "errors" [] (Decode.string |> Decode.nullable)
 
 
-event : SelectionSet decodesTo Tour.Union.Event -> SelectionSet decodesTo Tour.Object.SaveEventPayload
-event object_ =
-    Object.selectionForCompositeField "event" [] object_ identity
+user : SelectionSet decodesTo Tour.Object.User -> SelectionSet decodesTo Tour.Object.SaveEventPayload
+user object_ =
+    Object.selectionForCompositeField "user" [] object_ identity

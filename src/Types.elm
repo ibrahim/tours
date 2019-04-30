@@ -1,4 +1,4 @@
-module Types exposing (Authentication(..), Endpoint, Event(..), EventAttributes, RemoteGraphqlResponse, Response, Trip, User)
+module Types exposing (Authentication(..), Endpoint, Event(..), EventAttributes, RemoteGraphqlResponse, Response, Trip, TripWithEvents, User, UserTrip, UserTrips)
 
 import Graphql.Http
 import Graphql.Http.GraphqlError
@@ -8,6 +8,7 @@ import RemoteData exposing (RemoteData)
 type alias EventAttributes =
     { uuid : Maybe String
     , title : String
+    , event_type : String
     }
 
 
@@ -32,16 +33,36 @@ type alias Response =
     User
 
 
+type alias UserTrips =
+    { email : String
+    , trips : List Trip
+    }
+
+
 type alias User =
     { email : String
     , trips : List Trip
     }
 
 
-type alias Trip =
-    { name : String
+type alias UserTrip =
+    { email : String
+    , trips : List TripWithEvents
+    }
+
+
+type alias TripWithEvents =
+    { uuid : String
+    , name : String
     , price : Maybe String
     , events : List Event
+    }
+
+
+type alias Trip =
+    { uuid : String
+    , name : String
+    , price : Maybe String
     }
 
 

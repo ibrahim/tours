@@ -16,12 +16,12 @@ import Username exposing (Username)
 
 endpoint : String
 endpoint =
-    "http://localhost:5555/graphql"
+    "http://localhost:8000/graphql"
 
 
 loginEndpoint : String
 loginEndpoint =
-    "http://localhost:5555/login"
+    "http://localhost:8000/login"
 
 
 type Cred

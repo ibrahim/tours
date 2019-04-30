@@ -1,4 +1,4 @@
-module Viewer exposing (Viewer, avatar, cred, decoder, minPasswordChars, store, token, username)
+module Viewer exposing (Viewer, avatar, cred, decoder, minPasswordChars, store, token, tokenStr, username)
 
 {-| The logged-in user currently viewing this page. It stores enough data to
 be able to render the menu bar (username and avatar), along with Cred so it's
@@ -11,7 +11,7 @@ import Email exposing (Email)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (custom, required)
 import Json.Encode as Encode exposing (Value)
-import Token exposing (Token)
+import Token exposing (Token, toString)
 import Username exposing (Username)
 
 
@@ -25,6 +25,11 @@ type Viewer
 
 
 -- INFO
+
+
+tokenStr : Viewer -> String
+tokenStr viewer =
+    Token.toString (token (cred viewer))
 
 
 cred : Viewer -> Cred

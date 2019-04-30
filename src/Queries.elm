@@ -1,6 +1,7 @@
-module Queries exposing (eventsSelection, userTripsQuery)
+module Queries exposing (eventsSelection, userTripQuery, userTripSelection, userTripsQuery)
 
 import Graphql.Operation exposing (RootQuery)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, hardcoded, with)
 import Tour.Object
 import Tour.Object.Activity
@@ -11,38 +12,55 @@ import Tour.Object.Information
 import Tour.Object.Lodging
 import Tour.Object.Transportation
 import Tour.Object.Trip
-import Tour.Object.User
+import Tour.Object.User exposing (TripsOptionalArguments)
 import Tour.Query as Query exposing (current_user)
 import Tour.Scalar
 import Tour.Union
 import Tour.Union.Event
-import Types exposing (Event(..), Response, Trip, User)
+import Types exposing (Event(..), Response, Trip, TripWithEvents, UserTrip, UserTrips)
+import Uuid exposing (Uuid, toString)
 
 
-userTripsQuery : SelectionSet Response RootQuery
+userTripsQuery : SelectionSet UserTrips RootQuery
 userTripsQuery =
-    Query.current_user userSelection
+    Query.current_user <|
+        SelectionSet.map2 UserTrips
+            Tour.Object.User.email
+            (Tour.Object.User.trips identity <|
+                SelectionSet.map3 Trip
+                    Tour.Object.Trip.uuid
+                    Tour.Object.Trip.name
+                    Tour.Object.Trip.price
+            )
 
 
+userTripQuery : Uuid -> SelectionSet UserTrip RootQuery
+userTripQuery uuid =
+    Query.current_user <| userTripSelection uuid
 
--- userSelection : SelectionSet User Tour.Object.User
 
-
-userSelection =
-    SelectionSet.map2 User
+userTripSelection : Uuid -> SelectionSet UserTrip Tour.Object.User
+userTripSelection uuid =
+    let
+        optional_args =
+            \o -> { o | uuid = Present (Uuid.toString uuid) }
+    in
+    SelectionSet.map2 UserTrip
         Tour.Object.User.email
-        (Tour.Object.User.trips identity tripSelection)
-
-
-
--- tripSelection : SelectionSet Trip Tour.Object.Trip
+        (Tour.Object.User.trips optional_args <|
+            SelectionSet.map4 TripWithEvents
+                Tour.Object.Trip.uuid
+                Tour.Object.Trip.name
+                Tour.Object.Trip.price
+                (Tour.Object.Trip.events eventsSelection)
+        )
 
 
 tripSelection =
     SelectionSet.map3 Trip
+        Tour.Object.Trip.uuid
         Tour.Object.Trip.name
         Tour.Object.Trip.price
-        (Tour.Object.Trip.events eventsSelection)
 
 
 eventsSelection : SelectionSet Event Tour.Union.Event

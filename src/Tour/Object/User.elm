@@ -32,6 +32,7 @@ id =
 type alias TripsOptionalArguments =
     { status : OptionalArgument String
     , limit : OptionalArgument Int
+    , uuid : OptionalArgument String
     }
 
 
@@ -39,10 +40,10 @@ trips : (TripsOptionalArguments -> TripsOptionalArguments) -> SelectionSet decod
 trips fillInOptionals object_ =
     let
         filledInOptionals =
-            fillInOptionals { status = Absent, limit = Absent }
+            fillInOptionals { status = Absent, limit = Absent, uuid = Absent }
 
         optionalArgs =
-            [ Argument.optional "status" filledInOptionals.status Encode.string, Argument.optional "limit" filledInOptionals.limit Encode.int ]
+            [ Argument.optional "status" filledInOptionals.status Encode.string, Argument.optional "limit" filledInOptionals.limit Encode.int, Argument.optional "uuid" filledInOptionals.uuid Encode.string ]
                 |> List.filterMap identity
     in
     Object.selectionForCompositeField "trips" optionalArgs object_ (identity >> Decode.list)
