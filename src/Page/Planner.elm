@@ -34,10 +34,6 @@ type Msg
     | SubmitEvent
 
 
-type Problem
-    = Problem String
-
-
 
 -- Msg }}}
 -- Model {{{
@@ -106,27 +102,14 @@ update msg model =
             ( { model | event_type = typ_ }, Cmd.none )
 
         GotEventResponse response ->
-            case response of
-                RemoteData.Failure error ->
-                    case error of
-                        -- Graphql Error
-                        Graphql.Http.GraphqlError possiblyParsedData errors ->
-                            case List.map (\o -> o.message) errors |> List.head of
-                                Just problem ->
-                                    ( { model | problems = [ Problem problem ] }, Cmd.none )
+            let
+                resolve =
+                    \data -> { model | trip = RemoteData.map (always data) model.trip }
 
-                                Nothing ->
-                                    ( model, Cmd.none )
-
-                        -- Http Error
-                        Graphql.Http.HttpError httpError ->
-                            ( { model | problems = [ Problem (Debug.toString httpError) ] }, Cmd.none )
-
-                RemoteData.Success (Just data) ->
-                    ( { model | trip = RemoteData.map (always data) model.trip }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
+                reject =
+                    \problems -> { model | problems = problems }
+            in
+            Api.processResponse response model resolve reject
 
         ReportProblem problem ->
             ( { model | problems = [ problem ] }, Cmd.none )

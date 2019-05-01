@@ -1,15 +1,18 @@
-port module Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred(..), application, credDecoder, decoderFromCred, endpoint, expectJson, loginEndpoint, storeCredWith, username, viewerChanges)
+port module Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred(..), application, credDecoder, decoderFromCred, endpoint, expectJson, loginEndpoint, processResponse, storeCredWith, username, viewerChanges)
 
 import Avatar exposing (Avatar(..))
 import Browser
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
+import Graphql.Http
+import Graphql.Http.GraphqlError
 import Http exposing (Error(..), Expect, Response(..))
 import Json.Decode as Decode exposing (Decoder, Value, decodeString, errorToString, field, string)
 import Json.Decode.Pipeline as Pipeline exposing (optional, required)
 import Json.Encode as Encode
+import RemoteData exposing (RemoteData)
 import Token exposing (Token)
-import Types exposing (Endpoint, Response, Trip)
+import Types exposing (Endpoint, Problem(..), Response, Trip)
 import Url exposing (Url)
 import Username exposing (Username)
 
@@ -202,3 +205,28 @@ expectJson toMsg decoder =
 
                         Err err ->
                             Err (BadBody (Decode.errorToString err))
+
+
+processResponse : RemoteData (Graphql.Http.RawError parsedData httpError) (Maybe a) -> m -> (a -> m) -> (List Problem -> m) -> ( m, Cmd msg )
+processResponse response model resolve reject =
+    case response of
+        RemoteData.Failure error ->
+            case error of
+                -- Graphql Error
+                Graphql.Http.GraphqlError possiblyParsedData errors ->
+                    case List.map (\o -> o.message) errors |> List.head of
+                        Just problem ->
+                            ( reject [ Problem problem ], Cmd.none )
+
+                        Nothing ->
+                            ( model, Cmd.none )
+
+                -- Http Error
+                Graphql.Http.HttpError httpError ->
+                    ( reject [ Problem (Debug.toString httpError) ], Cmd.none )
+
+        RemoteData.Success (Just data) ->
+            ( resolve data, Cmd.none )
+
+        _ ->
+            ( model, Cmd.none )

@@ -1,8 +1,12 @@
-module Types exposing (Authentication(..), Endpoint, Event(..), EventAttributes, RemoteGraphqlResponse, Response, Trip, TripWithEvents, User, UserTrip, UserTrips)
+module Types exposing (Authentication(..), Endpoint, Event(..), EventAttributes, Problem(..), RemoteGraphqlResponse, Response, Trip, TripWithEvents, User, UserTrip, UserTrips)
 
 import Graphql.Http
 import Graphql.Http.GraphqlError
 import RemoteData exposing (RemoteData)
+
+
+type Problem
+    = Problem String
 
 
 type alias EventAttributes =
