@@ -162,11 +162,13 @@ view { trip, session, event_title, problems } =
         , case session of
             LoggedIn _ viewer ->
                 div []
-                    [ text (Username.toString (Viewer.username viewer))
-                    , showProblem problems
-                    , eventForm
-                    , text ("New Event: " ++ event_title)
-                    , ul [] [ viewTrip trip ]
+                    [ div []
+                        [ text (Username.toString (Viewer.username viewer))
+                        , showProblem problems
+                        , eventForm
+                        , text ("New Event: " ++ event_title)
+                        , ul [] [ viewTrip trip ]
+                        ]
                     ]
 
             Guest _ ->
@@ -256,7 +258,7 @@ viewEvent event =
 
 
 title_with_price uuid title price =
-    li [] [ p [ onClick (ShowEvent (Uuid uuid)) ] [ text title, text <| String.fromInt <| Maybe.withDefault 0 price ] ]
+    li [] [ a [ href "", onClick (ShowEvent (Uuid uuid)) ] [ text title, text <| String.fromInt <| Maybe.withDefault 0 price ] ]
 
 
 errorToString : Graphql.Http.Error parsedData -> String
