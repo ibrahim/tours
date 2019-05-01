@@ -4,8 +4,8 @@ import Api
 import Browser
 import Graphql.Http
 import Graphql.Http.GraphqlError
-import Html exposing (Html, button, div, h1, input, li, option, p, pre, select, text, ul)
-import Html.Attributes exposing (value)
+import Html exposing (Html, a, button, div, h1, input, li, option, p, pre, select, text, ul)
+import Html.Attributes exposing (href, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Mutations
@@ -95,7 +95,7 @@ update msg model =
                     \data -> { model | trip = response }
 
                 reject =
-                    \problems -> { model | problems = problems }
+                    \problems -> { model | problems = problems, trip = RemoteData.NotAsked }
             in
             Api.processQueryResponse response model resolve reject
 
@@ -152,8 +152,17 @@ showProblem problems =
     ul [] (List.map viewProblem problems)
 
 
-viewProblem (Problem _ problem) =
-    li [] [ text problem ]
+container content =
+    div [] content
+
+
+viewProblem problem =
+    case problem of
+        Problem AuthenticationError message ->
+            container [ a [ href "#/login" ] [ text <| message ++ ". Click here to login." ] ]
+
+        Problem _ message ->
+            container [ p [] [ text message ] ]
 
 
 viewUserTrips trip =
@@ -168,7 +177,7 @@ viewUserTrips trip =
             p [] [ text ("Http error " ++ Debug.toString error) ]
 
         RemoteData.NotAsked ->
-            li [] [ text "Initializing.." ]
+            text ""
 
         RemoteData.Loading ->
             li [] [ text "Loading.." ]
