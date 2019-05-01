@@ -5,7 +5,7 @@ import Browser
 import Graphql.Http
 import Graphql.Http.GraphqlError
 import Html exposing (Html, a, button, div, h1, input, li, option, p, pre, select, text, ul)
-import Html.Attributes exposing (href, value)
+import Html.Attributes exposing (href, style, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Mutations
@@ -16,7 +16,7 @@ import Session exposing (Session(..), viewer)
 import Token exposing (toString)
 import Types exposing (..)
 import Username exposing (toString)
-import Uuid exposing (Uuid, toString)
+import Uuid exposing (Uuid(..), toString)
 import Viewer exposing (cred, tokenStr, username)
 
 
@@ -28,10 +28,12 @@ import Viewer exposing (cred, tokenStr, username)
 type Msg
     = GotUserTripResponse (RemoteData (Graphql.Http.Error UserTrip) UserTrip)
     | GotEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
+    | GotFetchEventResponse (RemoteData (Graphql.Http.Error Event) Event)
     | SetEventTitle String
     | SetEventType String
-    | ReportProblem Problem
+    | ShowEvent Uuid
     | SubmitEvent
+    | ReportProblem Problem
 
 
 
@@ -42,9 +44,11 @@ type Msg
 type alias Model =
     { session : Session
     , trip : RemoteData (Graphql.Http.Error UserTrip) UserTrip
+    , event : RemoteData (Graphql.Http.Error Event) Event
     , trip_id : Uuid
     , event_title : String
     , event_type : String
+    , event_id : Maybe Uuid
     , problems : List Problem
     }
 
@@ -70,9 +74,11 @@ initial_state : Session -> Uuid -> Model
 initial_state session uuid =
     { session = session
     , trip = RemoteData.Loading
+    , event = RemoteData.NotAsked
     , trip_id = uuid
     , event_title = ""
     , event_type = ""
+    , event_id = Nothing
     , problems = []
     }
 
@@ -95,7 +101,25 @@ update msg model =
                     \data -> { model | trip = response }
 
                 reject =
-                    \problems -> { model | problems = problems, trip = RemoteData.NotAsked }
+                    \problems ->
+                        { model
+                            | problems = problems
+                            , trip = RemoteData.NotAsked
+                        }
+            in
+            Api.processQueryResponse response model resolve reject
+
+        GotFetchEventResponse response ->
+            let
+                resolve =
+                    \data -> { model | event = response }
+
+                reject =
+                    \problems ->
+                        { model
+                            | problems = problems
+                            , event = RemoteData.NotAsked
+                        }
             in
             Api.processQueryResponse response model resolve reject
 
@@ -121,6 +145,9 @@ update msg model =
         ReportProblem problem ->
             ( { model | problems = [ problem ] }, Cmd.none )
 
+        ShowEvent uuid ->
+            ( { model | event_id = Just uuid }, fetchEvent model.session uuid )
+
 
 
 -- Update }}}
@@ -139,7 +166,7 @@ view { trip, session, event_title, problems } =
                     , showProblem problems
                     , eventForm
                     , text ("New Event: " ++ event_title)
-                    , ul [] [ viewUserTrips trip ]
+                    , ul [] [ viewTrip trip ]
                     ]
 
             Guest _ ->
@@ -165,12 +192,22 @@ viewProblem problem =
             container [ p [] [ text message ] ]
 
 
-viewUserTrips trip =
+viewTrip trip =
     case trip of
         RemoteData.Success user ->
             li []
                 [ text user.email
-                , ul [] (List.map viewTrip user.trips)
+                , ul []
+                    (user.trips
+                        |> List.map
+                            (\item ->
+                                li
+                                    []
+                                    [ text item.name
+                                    , ul [] (List.map viewEvent item.events)
+                                    ]
+                            )
+                    )
                 ]
 
         RemoteData.Failure error ->
@@ -183,13 +220,6 @@ viewUserTrips trip =
             li [] [ text "Loading.." ]
 
 
-viewTrip trip =
-    li []
-        [ text trip.name
-        , ul [] (List.map viewEvent trip.events)
-        ]
-
-
 eventForm =
     div []
         [ input [ onInput SetEventTitle ] []
@@ -198,36 +228,35 @@ eventForm =
         ]
 
 
-viewEvent : Event -> Html msg
+viewEvent : Event -> Html Msg
 viewEvent event =
     li []
         [ case event of
-            Dining title ->
-                li [] [ text title ]
+            Dining uuid title ->
+                li [] [ a [] [ text title ] ]
 
-            Information title ->
-                li [] [ text title ]
+            Information uuid title ->
+                li [] [ a [] [ text title ] ]
 
-            Activity title price ->
-                title_with_price title price
+            Activity uuid title price ->
+                title_with_price uuid title price
 
-            Lodging title price ->
-                title_with_price title price
+            Lodging uuid title price ->
+                title_with_price uuid title price
 
-            Flight title price ->
-                title_with_price title price
+            Flight uuid title price ->
+                title_with_price uuid title price
 
-            Transportation title price ->
-                title_with_price title price
+            Transportation uuid title price ->
+                title_with_price uuid title price
 
-            Cruise title price ->
-                title_with_price title price
+            Cruise uuid title price ->
+                title_with_price uuid title price
         ]
 
 
-title_with_price : String -> Maybe Int -> Html msg
-title_with_price title price =
-    li [] [ text title, text <| String.fromInt <| Maybe.withDefault 0 price ]
+title_with_price uuid title price =
+    li [] [ p [ onClick (ShowEvent (Uuid uuid)) ] [ text title, text <| String.fromInt <| Maybe.withDefault 0 price ] ]
 
 
 errorToString : Graphql.Http.Error parsedData -> String
@@ -262,6 +291,20 @@ saveEvent event session trip_id =
                     (RemoteData.fromResult
                         >> GotEventResponse
                     )
+
+        Guest _ ->
+            Cmd.none
+
+
+fetchEvent : Session -> Uuid -> Cmd Msg
+fetchEvent session uuid =
+    case session of
+        LoggedIn _ viewer ->
+            Queries.eventQuery uuid
+                |> Graphql.Http.queryRequest Api.endpoint
+                |> Graphql.Http.withHeader "authorization" ("Bearer " ++ Viewer.tokenStr viewer)
+                |> Graphql.Http.send
+                    (RemoteData.fromResult >> GotFetchEventResponse)
 
         Guest _ ->
             Cmd.none

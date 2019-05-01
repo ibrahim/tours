@@ -1,4 +1,4 @@
-module Queries exposing (eventsSelection, userTripQuery, userTripSelection, userTripsQuery)
+module Queries exposing (eventQuery, eventSelection, userTripQuery, userTripSelection, userTripsQuery)
 
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -52,8 +52,13 @@ userTripSelection uuid =
                 Tour.Object.Trip.uuid
                 Tour.Object.Trip.name
                 Tour.Object.Trip.price
-                (Tour.Object.Trip.events eventsSelection)
+                (Tour.Object.Trip.events eventSelection)
         )
+
+
+eventQuery : Uuid -> SelectionSet Event RootQuery
+eventQuery uuid =
+    Query.event { uuid = Uuid.toString uuid } <| eventSelection
 
 
 tripSelection =
@@ -63,8 +68,8 @@ tripSelection =
         Tour.Object.Trip.price
 
 
-eventsSelection : SelectionSet Event Tour.Union.Event
-eventsSelection =
+eventSelection : SelectionSet Event Tour.Union.Event
+eventSelection =
     Tour.Union.Event.fragments
         { onActivity = activitySelection
         , onLodging = lodgingSelection
@@ -77,38 +82,47 @@ eventsSelection =
 
 
 activitySelection =
-    SelectionSet.map2 Activity
+    SelectionSet.map3 Activity
+        Tour.Object.Activity.uuid
         Tour.Object.Activity.title
         Tour.Object.Activity.price
 
 
 lodgingSelection =
-    SelectionSet.map2 Lodging
+    SelectionSet.map3 Lodging
+        Tour.Object.Lodging.uuid
         Tour.Object.Lodging.title
         Tour.Object.Lodging.price
 
 
 flightSelection =
-    SelectionSet.map2 Flight
+    SelectionSet.map3 Flight
+        Tour.Object.Flight.uuid
         Tour.Object.Flight.title
         Tour.Object.Flight.price
 
 
 transportationSelection =
-    SelectionSet.map2 Transportation
+    SelectionSet.map3 Transportation
+        Tour.Object.Transportation.uuid
         Tour.Object.Transportation.title
         Tour.Object.Transportation.price
 
 
 cruiseSelection =
-    SelectionSet.map2 Cruise
+    SelectionSet.map3 Cruise
+        Tour.Object.Cruise.uuid
         Tour.Object.Cruise.title
         Tour.Object.Cruise.price
 
 
 informationSelection =
-    SelectionSet.map Information Tour.Object.Information.title
+    SelectionSet.map2 Information
+        Tour.Object.Information.uuid
+        Tour.Object.Information.title
 
 
 diningSelection =
-    SelectionSet.map Dining Tour.Object.Dining.title
+    SelectionSet.map2 Dining
+        Tour.Object.Dining.uuid
+        Tour.Object.Dining.title

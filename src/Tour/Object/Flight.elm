@@ -19,9 +19,9 @@ import Tour.ScalarCodecs
 import Tour.Union
 
 
-type_ : SelectionSet (Maybe String) Tour.Object.Flight
+type_ : SelectionSet String Tour.Object.Flight
 type_ =
-    Object.selectionForField "(Maybe String)" "_type" [] (Decode.string |> Decode.nullable)
+    Object.selectionForField "String" "_type" [] Decode.string
 
 
 currency : SelectionSet (Maybe String) Tour.Object.Flight
@@ -64,6 +64,6 @@ title =
     Object.selectionForField "String" "title" [] Decode.string
 
 
-uuid : SelectionSet (Maybe String) Tour.Object.Flight
+uuid : SelectionSet String Tour.Object.Flight
 uuid =
-    Object.selectionForField "(Maybe String)" "uuid" [] (Decode.string |> Decode.nullable)
+    Object.selectionForField "String" "uuid" [] Decode.string

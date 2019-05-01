@@ -1,4 +1,4 @@
-module Uuid exposing (Uuid, decoder, toString, urlParser)
+module Uuid exposing (Uuid(..), decoder, toString, urlParser)
 
 import Json.Decode as Decode exposing (Decoder)
 import Url.Parser exposing (Parser)

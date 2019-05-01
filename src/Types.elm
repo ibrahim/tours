@@ -3,6 +3,7 @@ module Types exposing (AppError(..), Authentication(..), Endpoint, Event(..), Ev
 import Graphql.Http
 import Graphql.Http.GraphqlError
 import RemoteData exposing (RemoteData)
+import Uuid exposing (Uuid)
 
 
 type AppError
@@ -76,10 +77,10 @@ type alias Trip =
 
 
 type Event
-    = Activity String (Maybe Int)
-    | Lodging String (Maybe Int)
-    | Flight String (Maybe Int)
-    | Transportation String (Maybe Int)
-    | Cruise String (Maybe Int)
-    | Information String
-    | Dining String
+    = Activity String String (Maybe Int)
+    | Lodging String String (Maybe Int)
+    | Flight String String (Maybe Int)
+    | Transportation String String (Maybe Int)
+    | Cruise String String (Maybe Int)
+    | Information String String
+    | Dining String String
