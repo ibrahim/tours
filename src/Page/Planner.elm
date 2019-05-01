@@ -90,7 +90,14 @@ init session uuid =
 update msg model =
     case msg of
         GotUserTripResponse response ->
-            ( { model | trip = response }, Cmd.none )
+            let
+                resolve =
+                    \data -> { model | trip = response }
+
+                reject =
+                    \problems -> { model | problems = problems }
+            in
+            Api.processQueryResponse response model resolve reject
 
         SubmitEvent ->
             ( model, saveEvent { uuid = Nothing, title = model.event_title, event_type = model.event_type } model.session model.trip_id )
@@ -109,7 +116,7 @@ update msg model =
                 reject =
                     \problems -> { model | problems = problems }
             in
-            Api.processResponse response model resolve reject
+            Api.processMutationResponse response model resolve reject
 
         ReportProblem problem ->
             ( { model | problems = [ problem ] }, Cmd.none )
@@ -145,7 +152,7 @@ showProblem problems =
     ul [] (List.map viewProblem problems)
 
 
-viewProblem (Problem problem) =
+viewProblem (Problem _ problem) =
     li [] [ text problem ]
 
 

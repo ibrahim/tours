@@ -1,18 +1,19 @@
-port module Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred(..), application, credDecoder, decoderFromCred, endpoint, expectJson, loginEndpoint, processResponse, storeCredWith, username, viewerChanges)
+port module Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred(..), application, credDecoder, decoderFromCred, endpoint, expectJson, loginEndpoint, processMutationResponse, processQueryResponse, storeCredWith, username, viewerChanges)
 
 import Avatar exposing (Avatar(..))
 import Browser
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
-import Graphql.Http
+import Graphql.Http exposing (HttpError(..))
 import Graphql.Http.GraphqlError
-import Http exposing (Error(..), Expect, Response(..))
+import Http exposing (Expect, Response(..))
 import Json.Decode as Decode exposing (Decoder, Value, decodeString, errorToString, field, string)
 import Json.Decode.Pipeline as Pipeline exposing (optional, required)
 import Json.Encode as Encode
 import RemoteData exposing (RemoteData)
 import Token exposing (Token)
-import Types exposing (Endpoint, Problem(..), Response, Trip)
+import Tuple exposing (first, pair, second)
+import Types exposing (AppError(..), Endpoint, Problem(..), Response, Trip)
 import Url exposing (Url)
 import Username exposing (Username)
 
@@ -207,26 +208,79 @@ expectJson toMsg decoder =
                             Err (BadBody (Decode.errorToString err))
 
 
-processResponse : RemoteData (Graphql.Http.RawError parsedData httpError) (Maybe a) -> m -> (a -> m) -> (List Problem -> m) -> ( m, Cmd msg )
-processResponse response model resolve reject =
+resolve_graphql_error error reject model =
+    case error of
+        -- Graphql Error
+        Graphql.Http.GraphqlError _ errors ->
+            case List.map (\o -> o.message) errors |> List.head of
+                Just problem ->
+                    ( reject [ Problem GraphqlError problem ], Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        -- Http Error
+        Graphql.Http.HttpError httpError ->
+            let
+                problems =
+                    toProblems httpError
+            in
+            ( reject problems, Cmd.none )
+
+
+processMutationResponse :
+    RemoteData (Graphql.Http.RawError parsedData httpError) (Maybe a)
+    -> m
+    -> (a -> m)
+    -> (List Problem -> m)
+    -> ( m, Cmd msg )
+processMutationResponse response model resolve reject =
     case response of
         RemoteData.Failure error ->
-            case error of
-                -- Graphql Error
-                Graphql.Http.GraphqlError possiblyParsedData errors ->
-                    case List.map (\o -> o.message) errors |> List.head of
-                        Just problem ->
-                            ( reject [ Problem problem ], Cmd.none )
-
-                        Nothing ->
-                            ( model, Cmd.none )
-
-                -- Http Error
-                Graphql.Http.HttpError httpError ->
-                    ( reject [ Problem (Debug.toString httpError) ], Cmd.none )
+            resolve_graphql_error error reject model
 
         RemoteData.Success (Just data) ->
             ( resolve data, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
+
+
+processQueryResponse :
+    RemoteData (Graphql.Http.RawError parsedData httpError) a
+    -> m
+    -> (a -> m)
+    -> (List Problem -> m)
+    -> ( m, Cmd msg )
+processQueryResponse response model resolve reject =
+    case response of
+        RemoteData.Failure error ->
+            resolve_graphql_error error reject model
+
+        RemoteData.Success data ->
+            ( resolve data, Cmd.none )
+
+        _ ->
+            ( model, Cmd.none )
+
+
+contains_str : String -> ( String, Problem ) -> List Problem
+contains_str source httpError =
+    if String.contains (Tuple.first httpError) source then
+        [ Tuple.second httpError ]
+
+    else
+        []
+
+
+httpErrors : List ( String, Problem )
+httpErrors =
+    [ ( "JWT", Problem AuthenticationError "Authentication Failed" ) ]
+
+
+toProblems httpError =
+    let
+        source =
+            Debug.toString httpError
+    in
+    List.concatMap (contains_str source) httpErrors
