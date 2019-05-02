@@ -264,10 +264,10 @@ viewEventItem : Event -> Html Msg
 viewEventItem event =
     case event of
         Dining uuid title ->
-            li [] [ a [] [ text title ] ]
+            li [] [ a [ href "", onClick (ShowEvent (Uuid uuid)) ] [ text title ] ]
 
         Information uuid title ->
-            li [] [ a [] [ text title ] ]
+            li [] [ a [ href "", onClick (ShowEvent (Uuid uuid)) ] [ text title ] ]
 
         Activity uuid title price ->
             title_with_price uuid title price
