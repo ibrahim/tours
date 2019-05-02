@@ -155,26 +155,41 @@ update msg model =
 
 
 view : Model -> { title : String, content : List (Html Msg) }
-view { trip, session, event_title, problems } =
-    { title = "TourFax"
+view { trip, session, event_title, problems, event } =
+    { title = "TourFax - Tour Planner"
     , content =
         [ div [] [ Page.header "Planner" ]
-        , case session of
-            LoggedIn _ viewer ->
-                div []
-                    [ div []
-                        [ text (Username.toString (Viewer.username viewer))
-                        , showProblem problems
-                        , eventForm
-                        , text ("New Event: " ++ event_title)
-                        , ul [] [ viewTrip trip ]
-                        ]
-                    ]
+        , div []
+            [ div []
+                [ case session of
+                    LoggedIn _ viewer ->
+                        div []
+                            [ div [ style "float" "left", style "width" "45%" ]
+                                [ text (Username.toString (Viewer.username viewer))
+                                , showProblem problems
+                                , eventForm
+                                , text ("New Event: " ++ event_title)
+                                , ul [] [ viewTrip trip ]
+                                ]
+                            ]
 
-            Guest _ ->
-                text "Unauthenticated"
+                    Guest _ ->
+                        text "Unauthenticated"
+                ]
+            , div [ style "float" "right", style "width" "45%" ]
+                [ viewEvent event
+                ]
+            ]
         ]
     }
+
+
+
+-- showEvent event =
+--   div [] [
+--       case event of
+--
+--     ]
 
 
 showProblem problems =
@@ -194,6 +209,21 @@ viewProblem problem =
             container [ p [] [ text message ] ]
 
 
+viewEvent event =
+    case event of
+        RemoteData.Success event_ ->
+            viewEventItem event_
+
+        RemoteData.Failure error ->
+            p [] [ text ("Http error " ++ Debug.toString error) ]
+
+        RemoteData.NotAsked ->
+            text ""
+
+        RemoteData.Loading ->
+            li [] [ text "Loading.." ]
+
+
 viewTrip trip =
     case trip of
         RemoteData.Success user ->
@@ -206,7 +236,7 @@ viewTrip trip =
                                 li
                                     []
                                     [ text item.name
-                                    , ul [] (List.map viewEvent item.events)
+                                    , ul [] (List.map viewEventItem item.events)
                                     ]
                             )
                     )
@@ -230,31 +260,29 @@ eventForm =
         ]
 
 
-viewEvent : Event -> Html Msg
-viewEvent event =
-    li []
-        [ case event of
-            Dining uuid title ->
-                li [] [ a [] [ text title ] ]
+viewEventItem : Event -> Html Msg
+viewEventItem event =
+    case event of
+        Dining uuid title ->
+            li [] [ a [] [ text title ] ]
 
-            Information uuid title ->
-                li [] [ a [] [ text title ] ]
+        Information uuid title ->
+            li [] [ a [] [ text title ] ]
 
-            Activity uuid title price ->
-                title_with_price uuid title price
+        Activity uuid title price ->
+            title_with_price uuid title price
 
-            Lodging uuid title price ->
-                title_with_price uuid title price
+        Lodging uuid title price ->
+            title_with_price uuid title price
 
-            Flight uuid title price ->
-                title_with_price uuid title price
+        Flight uuid title price ->
+            title_with_price uuid title price
 
-            Transportation uuid title price ->
-                title_with_price uuid title price
+        Transportation uuid title price ->
+            title_with_price uuid title price
 
-            Cruise uuid title price ->
-                title_with_price uuid title price
-        ]
+        Cruise uuid title price ->
+            title_with_price uuid title price
 
 
 title_with_price uuid title price =
