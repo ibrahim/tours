@@ -229,7 +229,7 @@ resolve_graphql_error error reject model =
 
 
 processMutationResponse :
-    RemoteData (Graphql.Http.RawError parsedData httpError) (Maybe a)
+    RemoteData (Graphql.Http.RawError parsedData HttpError) (Maybe a)
     -> m
     -> (a -> m)
     -> (List Problem -> m)
@@ -247,7 +247,7 @@ processMutationResponse response model resolve reject =
 
 
 processQueryResponse :
-    RemoteData (Graphql.Http.RawError parsedData httpError) a
+    RemoteData (Graphql.Http.RawError parsedData HttpError) a
     -> m
     -> (a -> m)
     -> (List Problem -> m)
@@ -278,9 +278,36 @@ httpErrors =
     [ ( "JWT", Problem AuthenticationError "Authentication Failed" ) ]
 
 
+
+-- toProblems : Http.Error -> List Problem
+
+
 toProblems httpError =
     let
         source =
-            Debug.toString httpError
+            case httpError of
+                Graphql.Http.BadUrl message ->
+                    message
+
+                Graphql.Http.BadStatus meta message ->
+                    message
+
+                Graphql.Http.NetworkError ->
+                    "Http Network Error"
+
+                Graphql.Http.BadPayload _ ->
+                    "Bad Payload"
+
+                Graphql.Http.Timeout ->
+                    "Http Timeout"
     in
     List.concatMap (contains_str source) httpErrors
+
+
+
+-- toProblems httpError =
+--     let
+--         source =
+--             Debug.toString httpError
+--     in
+--     List.concatMap (contains_str source) httpErrors

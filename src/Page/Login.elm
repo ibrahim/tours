@@ -71,11 +71,11 @@ view model =
     { title = "Login"
     , content =
         [ Page.header "Login"
-        , div [ class "cred-page" ]
-            [ div [ class "container page" ]
-                [ div [ class "row" ]
-                    [ div [ class "col-md-6 offset-md-3 col-xs-12" ]
-                        [ h1 [ class "text-xs-center" ] [ text "Sign in" ]
+        , section [ class "cred-page section" ]
+            [ div [ class "columns is-mobile is-centered" ]
+                [ div [ class "column is-half-desktop is-three-quarters-mobile" ]
+                    [ div [ class "" ]
+                        [ h1 [ class "title is-3" ] [ text "Sign in" ]
                         , ul [ class "error-messages" ]
                             (List.map viewProblem model.problems)
                         , viewForm model.form
@@ -104,27 +104,44 @@ viewProblem problem =
 viewForm : Form -> Html Msg
 viewForm form =
     Html.form [ onSubmit SubmittedForm ]
-        [ fieldset [ class "form-group" ]
-            [ input
-                [ class "form-control form-control-lg"
-                , placeholder "Email"
-                , onInput EnteredEmail
-                , value form.email
+        [ div [ class "field" ]
+            [ label [ class "label" ] [ text "Email" ]
+            , div [ class "control has-icons-left has-icons-right" ]
+                [ input
+                    [ class "input"
+                    , placeholder "Email"
+                    , onInput EnteredEmail
+                    , value form.email
+                    ]
+                    []
                 ]
-                []
             ]
-        , fieldset [ class "form-group" ]
-            [ input
-                [ class "form-control form-control-lg"
-                , type_ "password"
-                , placeholder "Password"
-                , onInput EnteredPassword
-                , value form.password
+        , div [ class "field" ]
+            [ label [ class "label" ] [ text "Password" ]
+            , div [ class "control has-icons-left has-icons-right" ]
+                [ input
+                    [ class "input"
+                    , type_ "password"
+                    , placeholder "Password"
+                    , onInput EnteredPassword
+                    , value form.password
+                    ]
+                    []
+                , span [ class "icon is-small is-left" ]
+                    [ i [ class "fas fa-user" ] [] ]
+                , span [ class "icon is-small is-right" ]
+                    [ i [ class "fas fa-check" ] [] ]
                 ]
-                []
+            , p [ class "help is-success" ] [ text "This username is available" ]
             ]
-        , button [ class "btn btn-lg btn-primary pull-xs-right" ]
-            [ text "Sign in" ]
+        , div [ class "field is-grouped" ]
+            [ div [ class "control" ]
+                [ button [ class "button is-link" ] [ text "Submit" ]
+                ]
+            , div [ class "control" ]
+                [ button [ class "button is-text" ] [ text "Cancel" ]
+                ]
+            ]
         ]
 
 

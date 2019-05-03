@@ -4,8 +4,8 @@ import Api
 import Browser
 import Graphql.Http
 import Graphql.Http.GraphqlError
-import Html exposing (Html, a, button, div, h1, input, li, option, p, pre, select, text, ul)
-import Html.Attributes exposing (href, style, value)
+import Html exposing (..)
+import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Mutations
@@ -34,6 +34,7 @@ type Msg
     | ShowEvent Uuid
     | SubmitEvent
     | ReportProblem Problem
+    | ClearProblems
 
 
 
@@ -148,6 +149,9 @@ update msg model =
         ShowEvent uuid ->
             ( { model | event_id = Just uuid }, fetchEvent model.session uuid )
 
+        ClearProblems ->
+            ( { model | problems = [] }, Cmd.none )
+
 
 
 -- Update }}}
@@ -159,25 +163,24 @@ view { trip, session, event_title, problems, event } =
     { title = "TourFax - Tour Planner"
     , content =
         [ div [] [ Page.header "Planner" ]
-        , div []
-            [ div []
-                [ case session of
-                    LoggedIn _ viewer ->
-                        div []
-                            [ div [ style "float" "left", style "width" "45%" ]
-                                [ text (Username.toString (Viewer.username viewer))
-                                , showProblem problems
-                                , eventForm
-                                , text ("New Event: " ++ event_title)
-                                , ul [] [ viewTrip trip ]
-                                ]
+        , div [ class "columns " ]
+            [ div [ class "column is-10 is-offset-1 columns is-mobile" ]
+                [ div [ class "column is-two-fifths" ]
+                    (case session of
+                        LoggedIn _ viewer ->
+                            [ text (Username.toString (Viewer.username viewer))
+                            , showProblem problems
+                            , eventForm
+                            , text ("New Event: " ++ event_title)
+                            , ul [] [ viewTrip trip ]
                             ]
 
-                    Guest _ ->
-                        text "Unauthenticated"
-                ]
-            , div [ style "float" "right", style "width" "45%" ]
-                [ viewEvent event
+                        Guest _ ->
+                            [ text "Unauthenticated" ]
+                    )
+                , div [ class "column is-three-fifths" ]
+                    [ viewEvent event
+                    ]
                 ]
             ]
         ]
@@ -197,7 +200,10 @@ showProblem problems =
 
 
 container content =
-    div [] content
+    div [ class "notification is-danger" ]
+        [ button [ class "delete", onClick ClearProblems ] []
+        , div [] content
+        ]
 
 
 viewProblem problem =
@@ -207,6 +213,107 @@ viewProblem problem =
 
         Problem _ message ->
             container [ p [] [ text message ] ]
+
+
+viewItiniraryMenu trip =
+    aside [ class "menu" ]
+        [ p [ class "menu-label" ]
+            [ text "General  " ]
+        , ul [ class "menu-list" ]
+            (List.map viewEventItem trip.events)
+        , p [ class "menu-label" ]
+            [ text "Administration  " ]
+        , ul [ class "menu-list" ]
+            [ li []
+                [ a []
+                    [ text "Team Settings" ]
+                ]
+            , li []
+                [ a [ class "is-active" ]
+                    [ text "Manage Your Team" ]
+                , ul []
+                    [ li []
+                        [ a []
+                            [ text "Members" ]
+                        ]
+                    , li []
+                        [ a []
+                            [ text "Plugins" ]
+                        ]
+                    , li []
+                        [ a []
+                            [ text "Add a member" ]
+                        ]
+                    ]
+                ]
+            , li []
+                [ a []
+                    [ text "Invitations" ]
+                ]
+            , li []
+                [ a []
+                    [ text "Cloud Storage Environment Settings" ]
+                ]
+            , li []
+                [ a []
+                    [ text "Authentication" ]
+                ]
+            ]
+        , p [ class "menu-label" ]
+            [ text "Transactions  " ]
+        , ul [ class "menu-list" ]
+            [ li []
+                [ a []
+                    [ text "Payments" ]
+                ]
+            , li []
+                [ a []
+                    [ text "Transfers" ]
+                ]
+            , li []
+                [ a []
+                    [ text "Balance" ]
+                ]
+            ]
+        ]
+
+
+viewItinirary trip =
+    nav [ class "panel" ]
+        (List.concat
+            [ [ p [ class "panel-heading" ]
+                    [ text "repositories  " ]
+              , div [ class "panel-block" ]
+                    [ p [ class "control has-icons-left" ]
+                        [ input [ class "input is-small", placeholder "search", type_ "text" ]
+                            []
+                        , span [ class "icon is-small is-left" ]
+                            [ i [ attribute "aria-hidden" "true", class "fas fa-search" ]
+                                []
+                            ]
+                        ]
+                    ]
+              , p [ class "panel-tabs" ]
+                    [ a [ class "is-active" ]
+                        [ text "all" ]
+                    , a []
+                        [ text "public" ]
+                    , a []
+                        [ text "private" ]
+                    , a []
+                        [ text "sources" ]
+                    , a []
+                        [ text "forks" ]
+                    ]
+              ]
+            , List.map viewEventItem trip.events
+            , [ div [ class "panel-block" ]
+                    [ button [ class "button is-link is-outlined is-fullwidth" ]
+                        [ text "reset all filters    " ]
+                    ]
+              ]
+            ]
+        )
 
 
 viewEvent event =
@@ -236,7 +343,7 @@ viewTrip trip =
                                 li
                                     []
                                     [ text item.name
-                                    , ul [] (List.map viewEventItem item.events)
+                                    , viewItinirary item
                                     ]
                             )
                     )
@@ -264,10 +371,10 @@ viewEventItem : Event -> Html Msg
 viewEventItem event =
     case event of
         Dining uuid title ->
-            li [] [ a [ href "", onClick (ShowEvent (Uuid uuid)) ] [ text title ] ]
+            title_with_price uuid title Nothing
 
         Information uuid title ->
-            li [] [ a [ href "", onClick (ShowEvent (Uuid uuid)) ] [ text title ] ]
+            title_with_price uuid title Nothing
 
         Activity uuid title price ->
             title_with_price uuid title price
@@ -286,7 +393,15 @@ viewEventItem event =
 
 
 title_with_price uuid title price =
-    li [] [ a [ href "", onClick (ShowEvent (Uuid uuid)) ] [ text title, text <| String.fromInt <| Maybe.withDefault 0 price ] ]
+    a
+        [ class "panel-block is-active", href "", onClick (ShowEvent (Uuid uuid)) ]
+        [ span [ class "panel-icon" ]
+            [ i [ attribute "aria-hidden" "true", class "fas fa-book" ]
+                []
+            ]
+        , text title
+        , text <| String.fromInt <| Maybe.withDefault 0 price
+        ]
 
 
 errorToString : Graphql.Http.Error parsedData -> String
