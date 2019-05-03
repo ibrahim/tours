@@ -10,10 +10,11 @@ import Http exposing (Expect, Response(..))
 import Json.Decode as Decode exposing (Decoder, Value, decodeString, errorToString, field, string)
 import Json.Decode.Pipeline as Pipeline exposing (optional, required)
 import Json.Encode as Encode
+import Problem exposing (AppError(..), Problem(..))
 import RemoteData exposing (RemoteData)
 import Token exposing (Token)
 import Tuple exposing (first, pair, second)
-import Types exposing (AppError(..), Endpoint, Problem(..), Response, Trip)
+import Types exposing (Endpoint, Response, Trip)
 import Url exposing (Url)
 import Username exposing (Username)
 
