@@ -1,4 +1,4 @@
-module Page exposing (Page(..), header)
+module Page exposing (Page(..), header, layout)
 
 import Api
 import Browser
@@ -15,15 +15,21 @@ type Page
     | Planner
 
 
+layout : String -> List (Html msg) -> List (Html msg)
+layout title content =
+    [ div []
+        [ header title
+        , div [ class "layout" ] content
+        ]
+    ]
+
+
 header : String -> Html msg
 header title =
     nav [ attribute "aria-label" "main navigation", class "navbar", attribute "role" "navigation" ]
         [ div [ class "navbar-brand" ]
-            [ a [ href "", class "navbar-item", Route.href Route.Home ]
-                [ img [ attribute "height" "31px", src "/logo.jpg", attribute "width" "32px" ]
-                    []
-                , span [ class "title is-4" ] [ text "TourFax" ]
-                ]
+            [ a [ href "", class "navbar-item is-flex", Route.href Route.Home ]
+                [ img [ src "/Tourfax_logo.png", attribute "alt" "TourFax" ] [] ]
             , a [ href "", attribute "aria-expanded" "false", attribute "aria-label" "menu", class "navbar-burger burger", attribute "data-target" "navbarBasicExample", attribute "role" "button" ]
                 [ span [ attribute "aria-hidden" "true" ]
                     []
@@ -55,6 +61,7 @@ header title =
                             [ text "Report an issue          " ]
                         ]
                     ]
+                , search
                 ]
             , div [ class "navbar-end" ]
                 [ div [ class "navbar-item" ]
@@ -67,6 +74,34 @@ header title =
                             [ text "Log in" ]
                         ]
                     ]
+                ]
+            ]
+        ]
+
+
+search =
+    div [ class "dropdown is-active-not navbar-item" ]
+        [ div [ class "dropdown-trigger control is-small has-icons-left is-loading-not" ]
+            [ input [ placeholder "Search", attribute "aria-controls" "dropdown-menu", attribute "aria-haspopup" "true", class "input is-rounded is-small" ] []
+            , span [ class "icon is-small is-left" ]
+                [ i [ class "fas fa-search" ]
+                    []
+                ]
+            ]
+        , div [ class "dropdown-menu", id "dropdown-menu", attribute "role" "menu" ]
+            [ div [ class "dropdown-content" ]
+                [ a [ class "dropdown-item", href "#" ]
+                    [ text "Dropdown item      " ]
+                , a [ class "dropdown-item" ]
+                    [ text "Other dropdown item      " ]
+                , a [ class "dropdown-item is-active", href "#" ]
+                    [ text "Active dropdown item      " ]
+                , a [ class "dropdown-item", href "#" ]
+                    [ text "Other dropdown item      " ]
+                , hr [ class "dropdown-divider" ]
+                    []
+                , a [ class "dropdown-item", href "#" ]
+                    [ text "With a divider      " ]
                 ]
             ]
         ]

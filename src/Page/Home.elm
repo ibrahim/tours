@@ -9,6 +9,7 @@ import Html.Attributes exposing (href, value)
 import Html.Events exposing (onClick, onInput)
 import Mutations
 import Page exposing (header)
+import Problem exposing (Problem(..), showProblems)
 import Queries
 import RemoteData exposing (RemoteData)
 import Session exposing (Session(..))
@@ -24,6 +25,7 @@ import Viewer exposing (cred, tokenStr, username)
 
 type Msg
     = GotUserTripsResponse (RemoteData (Graphql.Http.Error User) User)
+    | ClearProblems
 
 
 
@@ -33,7 +35,8 @@ type Msg
 
 type alias Model =
     { session : Session
-    , trips : List Trip
+    , trips : RemoteData (Graphql.Http.Error User) User
+    , problems : List Problem
     }
 
 
@@ -45,7 +48,8 @@ type alias Model =
 initial_state : Session -> Model
 initial_state session =
     { session = session
-    , trips = []
+    , trips = RemoteData.Loading
+    , problems = []
     }
 
 
@@ -62,15 +66,21 @@ init session =
 update msg model =
     case msg of
         GotUserTripsResponse response ->
-            case response of
-                RemoteData.Success { email, trips } ->
-                    ( { model | trips = trips }, Cmd.none )
+            let
+                resolve =
+                    \data -> { model | trips = response }
 
-                RemoteData.Failure errorData ->
-                    ( model, Cmd.none )
+                reject =
+                    \problems ->
+                        { model
+                            | problems = problems
+                            , trips = RemoteData.NotAsked
+                        }
+            in
+            Api.processQueryResponse response model resolve reject
 
-                _ ->
-                    ( model, Cmd.none )
+        ClearProblems ->
+            ( { model | problems = [] }, Cmd.none )
 
 
 
@@ -79,7 +89,7 @@ update msg model =
 
 
 view : Model -> { title : String, content : List (Html Msg) }
-view { trips, session } =
+view { trips, session, problems } =
     { title = "TourFax"
     , content =
         [ div [] [ Page.header "Home" ]
@@ -87,13 +97,37 @@ view { trips, session } =
             LoggedIn _ viewer ->
                 div []
                     [ text (Username.toString (Viewer.username viewer))
-                    , ul [] (List.map viewTrip trips)
+                    , showProblems ClearProblems problems
+                    , ul [] (viewTrips trips)
                     ]
 
             Guest _ ->
                 text "Unauthenticated"
         ]
     }
+
+
+viewTrips trips =
+    case trips of
+        RemoteData.Success user ->
+            user.trips
+                |> List.map
+                    (\item ->
+                        li
+                            []
+                            [ text item.name
+                            , viewTrip item
+                            ]
+                    )
+
+        RemoteData.Failure error ->
+            [ text "Http error " ]
+
+        RemoteData.NotAsked ->
+            [ text "" ]
+
+        RemoteData.Loading ->
+            [ text "Loading.." ]
 
 
 viewTrip : Trip -> Html msg

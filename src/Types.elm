@@ -1,4 +1,18 @@
-module Types exposing (Authentication(..), Endpoint, Event(..), EventAttributes, RemoteGraphqlResponse, Response, Trip, TripWithEvents, User, UserTrip, UserTrips)
+module Types exposing
+    ( Authentication(..)
+    , Endpoint
+    , Event(..)
+    , EventAttributes
+    , EventForm
+    , EventInputs(..)
+    , RemoteGraphqlResponse
+    , Response
+    , Trip
+    , TripWithEvents
+    , User
+    , UserTrip
+    , UserTrips
+    )
 
 import Graphql.Http
 import Graphql.Http.GraphqlError
@@ -6,10 +20,23 @@ import RemoteData exposing (RemoteData)
 import Uuid exposing (Uuid)
 
 
+type EventInputs
+    = CreateEvent EventAttributes
+    | UpdateEvent EventForm
+
+
 type alias EventAttributes =
     { uuid : Maybe String
     , title : String
     , event_type : String
+    }
+
+
+type alias EventForm =
+    { uuid : Maybe String
+    , title : String
+    , event_type : String
+    , price : Maybe Int
     }
 
 
@@ -48,6 +75,7 @@ type alias User =
 
 type alias UserTrip =
     { email : String
+    , event : Maybe Event
     , trips : List TripWithEvents
     }
 
@@ -67,11 +95,15 @@ type alias Trip =
     }
 
 
+
+-- Activity uuid type title price
+
+
 type Event
-    = Activity String String (Maybe Int)
-    | Lodging String String (Maybe Int)
-    | Flight String String (Maybe Int)
-    | Transportation String String (Maybe Int)
-    | Cruise String String (Maybe Int)
-    | Information String String
-    | Dining String String
+    = Activity String String String (Maybe Int)
+    | Lodging String String String (Maybe Int)
+    | Flight String String String (Maybe Int)
+    | Transportation String String String (Maybe Int)
+    | Cruise String String String (Maybe Int)
+    | Information String String String
+    | Dining String String String

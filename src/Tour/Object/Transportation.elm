@@ -19,9 +19,9 @@ import Tour.ScalarCodecs
 import Tour.Union
 
 
-type_ : SelectionSet (Maybe String) Tour.Object.Transportation
+type_ : SelectionSet String Tour.Object.Transportation
 type_ =
-    Object.selectionForField "(Maybe String)" "_type" [] (Decode.string |> Decode.nullable)
+    Object.selectionForField "String" "_type" [] Decode.string
 
 
 currency : SelectionSet (Maybe String) Tour.Object.Transportation

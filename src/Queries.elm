@@ -1,4 +1,9 @@
-module Queries exposing (eventQuery, eventSelection, userTripQuery, userTripSelection, userTripsQuery)
+module Queries exposing
+    ( eventSelection
+    , userTripQuery
+    , userTripSelection
+    , userTripsQuery
+    )
 
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -34,20 +39,33 @@ userTripsQuery =
             )
 
 
-userTripQuery : Uuid -> SelectionSet UserTrip RootQuery
-userTripQuery uuid =
-    Query.current_user <| userTripSelection uuid
+userTripQuery : Uuid -> Maybe Uuid -> SelectionSet UserTrip RootQuery
+userTripQuery trip_id event_id =
+    Query.current_user <| userTripSelection trip_id event_id
 
 
-userTripSelection : Uuid -> SelectionSet UserTrip Tour.Object.User
-userTripSelection uuid =
+userTripSelection : Uuid -> Maybe Uuid -> SelectionSet UserTrip Tour.Object.User
+userTripSelection trip_id event_id =
     let
-        optional_args =
-            \o -> { o | uuid = Present (Uuid.toString uuid) }
+        optional_trip_id =
+            \o -> { o | uuid = Present (Uuid.toString trip_id) }
+
+        optional_event_args =
+            case event_id of
+                Just uuid ->
+                    \o ->
+                        { o
+                            | uuid = Present (Uuid.toString uuid)
+                            , trip_id = Present (Uuid.toString trip_id)
+                        }
+
+                Nothing ->
+                    identity
     in
-    SelectionSet.map2 UserTrip
+    SelectionSet.map3 UserTrip
         Tour.Object.User.email
-        (Tour.Object.User.trips optional_args <|
+        (Tour.Object.User.event optional_event_args eventSelection)
+        (Tour.Object.User.trips optional_trip_id <|
             SelectionSet.map4 TripWithEvents
                 Tour.Object.Trip.uuid
                 Tour.Object.Trip.name
@@ -56,9 +74,19 @@ userTripSelection uuid =
         )
 
 
-eventQuery : Uuid -> SelectionSet Event RootQuery
-eventQuery uuid =
-    Query.event { uuid = Uuid.toString uuid } <| eventSelection
+
+-- eventQuery : Maybe Uuid -> SelectionSet (Maybe Event) RootQuery
+-- eventQuery maybe_uuid =
+--     let
+--         optional_uuid =
+--             case maybe_uuid of
+--                 Just uuid ->
+--                     \o -> { o | uuid = Present (Uuid.toString uuid) }
+--
+--                 Nothing ->
+--                     identity
+--     in
+--     Query.event optional_uuid <| eventSelection
 
 
 tripSelection =
@@ -82,47 +110,54 @@ eventSelection =
 
 
 activitySelection =
-    SelectionSet.map3 Activity
+    SelectionSet.map4 Activity
         Tour.Object.Activity.uuid
+        Tour.Object.Activity.type_
         Tour.Object.Activity.title
         Tour.Object.Activity.price
 
 
 lodgingSelection =
-    SelectionSet.map3 Lodging
+    SelectionSet.map4 Lodging
         Tour.Object.Lodging.uuid
+        Tour.Object.Lodging.type_
         Tour.Object.Lodging.title
         Tour.Object.Lodging.price
 
 
 flightSelection =
-    SelectionSet.map3 Flight
+    SelectionSet.map4 Flight
         Tour.Object.Flight.uuid
+        Tour.Object.Flight.type_
         Tour.Object.Flight.title
         Tour.Object.Flight.price
 
 
 transportationSelection =
-    SelectionSet.map3 Transportation
+    SelectionSet.map4 Transportation
         Tour.Object.Transportation.uuid
+        Tour.Object.Transportation.type_
         Tour.Object.Transportation.title
         Tour.Object.Transportation.price
 
 
 cruiseSelection =
-    SelectionSet.map3 Cruise
+    SelectionSet.map4 Cruise
         Tour.Object.Cruise.uuid
+        Tour.Object.Cruise.type_
         Tour.Object.Cruise.title
         Tour.Object.Cruise.price
 
 
 informationSelection =
-    SelectionSet.map2 Information
+    SelectionSet.map3 Information
         Tour.Object.Information.uuid
+        Tour.Object.Information.type_
         Tour.Object.Information.title
 
 
 diningSelection =
-    SelectionSet.map2 Dining
+    SelectionSet.map3 Dining
         Tour.Object.Dining.uuid
+        Tour.Object.Dining.type_
         Tour.Object.Dining.title

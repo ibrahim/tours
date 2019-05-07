@@ -3,7 +3,7 @@ module Page.Login exposing (Model, Msg, init, subscriptions, toSession, update, 
 {-| The login page.
 -}
 
-import Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred, expectJson)
+import Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred, apiErrorToProblems, expectJson)
 import Browser.Navigation as Nav
 import Dict exposing (Dict(..), get)
 import Html exposing (..)
@@ -14,6 +14,7 @@ import Json.Decode as Decode exposing (Decoder, decodeString, field, string)
 import Json.Decode.Pipeline exposing (optional)
 import Json.Encode as Encode
 import Page exposing (header)
+import Problem exposing (AppError(..), Problem(..), ValidatedField(..), showProblems)
 import Route exposing (Route)
 import Session exposing (Session)
 import Viewer exposing (Viewer)
@@ -29,11 +30,6 @@ type alias Model =
     , viewer : Maybe Viewer
     , form : Form
     }
-
-
-type Problem
-    = InvalidEntry ValidatedField String
-    | ServerError String
 
 
 type alias Form =
@@ -76,8 +72,7 @@ view model =
                 [ div [ class "column is-half-desktop is-three-quarters-mobile" ]
                     [ div [ class "" ]
                         [ h1 [ class "title is-3" ] [ text "Sign in" ]
-                        , ul [ class "error-messages" ]
-                            (List.map viewProblem model.problems)
+                        , showProblems ClearProblems model.problems
                         , viewForm model.form
                         ]
                     ]
@@ -85,20 +80,6 @@ view model =
             ]
         ]
     }
-
-
-viewProblem : Problem -> Html msg
-viewProblem problem =
-    let
-        errorMessage =
-            case problem of
-                InvalidEntry _ str ->
-                    str
-
-                ServerError str ->
-                    str
-    in
-    li [] [ text errorMessage ]
 
 
 viewForm : Form -> Html Msg
@@ -156,6 +137,7 @@ type Msg
     | EnteredPassword String
     | CompletedLogin (Result ApiError (ApiResponse Viewer))
     | GotSession Session
+    | ClearProblems
 
 
 
@@ -189,19 +171,20 @@ update msg model =
                 serverErrors =
                     case error of
                         ErrorMessage metadata body ->
-                            [ ServerError body ]
+                            apiErrorToProblems error
 
+                        --[ Problem ServerError body ]
                         Timeout ->
-                            [ ServerError "Login Request Timeout" ]
+                            [ Problem ServerError "Login Request Timeout" ]
 
                         NetworkError ->
-                            [ ServerError "Network Error while Login" ]
+                            [ Problem ServerError "Network Error while Login" ]
 
                         BadUrl _ ->
-                            [ ServerError "Login Request: bad url" ]
+                            [ Problem ServerError "Login Request: bad url" ]
 
                         BadBody err ->
-                            [ ServerError ("Login Request:  unable to decode login response" ++ err) ]
+                            [ Problem ServerError ("Login Request:  unable to decode login response" ++ err) ]
 
                 -- Api.decodeErrors error
                 --     |> List.map ServerError
@@ -219,6 +202,9 @@ update msg model =
             ( { model | session = session }
             , Route.replaceUrl (Session.navKey session) Route.Home
             )
+
+        ClearProblems ->
+            ( { model | problems = [] }, Cmd.none )
 
 
 
@@ -253,17 +239,10 @@ type TrimmedForm
     = Trimmed Form
 
 
-{-| When adding a variant here, add it to `fieldsToValidate` too!
--}
-type ValidatedField
-    = Email
-    | Password
-
-
 fieldsToValidate : List ValidatedField
 fieldsToValidate =
-    [ Email
-    , Password
+    [ ValidatedField "Email"
+    , ValidatedField "Password"
     ]
 
 
@@ -285,21 +264,24 @@ validate form =
 
 validateField : TrimmedForm -> ValidatedField -> List Problem
 validateField (Trimmed form) field =
-    List.map (InvalidEntry field) <|
+    List.map (Problem (InvalidEntry field)) <|
         case field of
-            Email ->
+            ValidatedField "Email" ->
                 if String.isEmpty form.email then
                     [ "email can't be blank." ]
 
                 else
                     []
 
-            Password ->
+            ValidatedField "Password" ->
                 if String.isEmpty form.password then
                     [ "password can't be blank." ]
 
                 else
                     []
+
+            ValidatedField _ ->
+                []
 
 
 {-| Don't trim while the user is typing! That would be super annoying.

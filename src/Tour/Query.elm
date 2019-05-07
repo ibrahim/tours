@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Query exposing (EventRequiredArguments, current_user, event)
+module Tour.Query exposing (current_user)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -24,14 +24,3 @@ import Tour.Union
 current_user : SelectionSet decodesTo Tour.Object.User -> SelectionSet decodesTo RootQuery
 current_user object_ =
     Object.selectionForCompositeField "current_user" [] object_ identity
-
-
-type alias EventRequiredArguments =
-    { uuid : String }
-
-
-{-| Event type
--}
-event : EventRequiredArguments -> SelectionSet decodesTo Tour.Union.Event -> SelectionSet decodesTo RootQuery
-event requiredArgs object_ =
-    Object.selectionForCompositeField "event" [ Argument.required "uuid" requiredArgs.uuid Encode.string ] object_ identity

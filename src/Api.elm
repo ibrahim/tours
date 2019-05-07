@@ -1,4 +1,4 @@
-port module Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred(..), application, credDecoder, decoderFromCred, endpoint, expectJson, loginEndpoint, processMutationResponse, processQueryResponse, storeCredWith, username, viewerChanges)
+port module Api exposing (ApiError(..), ApiHeaders, ApiResponse(..), Cred(..), apiErrorToProblems, application, credDecoder, decoderFromCred, endpoint, expectJson, loginEndpoint, processMutationResponse, processQueryResponse, storeCredWith, username, viewerChanges)
 
 import Avatar exposing (Avatar(..))
 import Browser
@@ -276,11 +276,26 @@ contains_str source httpError =
 
 httpErrors : List ( String, Problem )
 httpErrors =
-    [ ( "JWT", Problem AuthenticationError "Authentication Failed" ) ]
+    [ ( "JWT", Problem AuthenticationError "Authentication Failed" )
+    , ( "Mysql", Problem ServerError "Server Error" )
+    ]
 
 
 
 -- toProblems : Http.Error -> List Problem
+
+
+apiErrorToProblems httpError =
+    let
+        source =
+            case httpError of
+                ErrorMessage meta message ->
+                    message
+
+                _ ->
+                    "Server Error"
+    in
+    List.concatMap (contains_str source) httpErrors
 
 
 toProblems httpError =

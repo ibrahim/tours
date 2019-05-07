@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Object.User exposing (TripsOptionalArguments, email, id, trips)
+module Tour.Object.User exposing (EventOptionalArguments, TripsOptionalArguments, email, event, id, trips)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -22,6 +22,27 @@ import Tour.Union
 email : SelectionSet String Tour.Object.User
 email =
     Object.selectionForField "String" "email" [] Decode.string
+
+
+type alias EventOptionalArguments =
+    { uuid : OptionalArgument String
+    , trip_id : OptionalArgument String
+    }
+
+
+{-| Event type
+-}
+event : (EventOptionalArguments -> EventOptionalArguments) -> SelectionSet decodesTo Tour.Union.Event -> SelectionSet (Maybe decodesTo) Tour.Object.User
+event fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { uuid = Absent, trip_id = Absent }
+
+        optionalArgs =
+            [ Argument.optional "uuid" filledInOptionals.uuid Encode.string, Argument.optional "trip_id" filledInOptionals.trip_id Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "event" optionalArgs object_ (identity >> Decode.nullable)
 
 
 id : SelectionSet Tour.ScalarCodecs.Id Tour.Object.User

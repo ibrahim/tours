@@ -19,9 +19,9 @@ import Tour.ScalarCodecs
 import Tour.Union
 
 
-type_ : SelectionSet (Maybe String) Tour.Object.Information
+type_ : SelectionSet String Tour.Object.Information
 type_ =
-    Object.selectionForField "(Maybe String)" "_type" [] (Decode.string |> Decode.nullable)
+    Object.selectionForField "String" "_type" [] Decode.string
 
 
 day : SelectionSet (Maybe Int) Tour.Object.Information
