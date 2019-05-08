@@ -30,18 +30,15 @@ import Viewer exposing (cred, tokenStr, username)
 type Msg
     = GotUserTripResponse (RemoteData (Graphql.Http.Error UserTrip) UserTrip)
     | GotCreateEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
-    | GotUpdatedEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
+    | GotUpdateEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
     | GotFetchEventResponse (RemoteData (Graphql.Http.Error UserTrip) UserTrip)
-    | SetEventTitle String
-    | SetEventType String
     | ShowEvent Uuid
-    | SubmitEvent
+    | GotoScreen Screen
+    | CreateNewEvent EventType
     | ReportProblem Problem
     | ClearProblems
-    | ClearEvent
-    | UpdateEventFormTitle String
-    | UpdateEventFormPrice String
-    | SubmittedEventForm
+    | UpdateEventForm EventForm
+    | SubmittedEventForm Uuid EventForm
 
 
 
@@ -58,19 +55,15 @@ type Screen
     | ListDay Int
     | Search String
     | ListByType EventType
-    | EventForm Uuid
+    | EditEvent Uuid EventForm
 
 
 type alias Model =
     { session : Session
     , trip : RemoteData (Graphql.Http.Error UserTrip) UserTrip
-    , event : RemoteData (Graphql.Http.Error Event) Event
     , trip_id : Uuid
-    , event_id : Maybe Uuid
-    , event_title : String
-    , event_type : String
     , problems : List Problem
-    , event_form : Maybe EventForm
+    , screen : Screen
     }
 
 
@@ -103,13 +96,9 @@ initial_state : Session -> Uuid -> Model
 initial_state session uuid =
     { session = session
     , trip = RemoteData.Loading
-    , event = RemoteData.NotAsked
     , trip_id = uuid
-    , event_id = Nothing
-    , event_title = ""
-    , event_type = ""
     , problems = []
-    , event_form = Nothing
+    , screen = ListAll
     }
 
 
@@ -149,7 +138,7 @@ update msg model =
             in
             Api.processMutationResponse response model resolve reject
 
-        GotUpdatedEventResponse response ->
+        GotUpdateEventResponse response ->
             let
                 resolve =
                     \data -> { model | trip = RemoteData.map (always data) model.trip }
@@ -161,39 +150,96 @@ update msg model =
 
         GotFetchEventResponse response ->
             let
-                populate_event_form =
-                    case response of
-                        RemoteData.Success { email, event, trips } ->
+                resolve data =
+                    case data of
+                        { email, event, trips } ->
                             case event of
                                 Just (Dining uuid type_ title) ->
-                                    { uuid = Just uuid, title = title, price = Nothing, event_type = type_ }
+                                    { model
+                                        | screen =
+                                            EditEvent (Uuid uuid)
+                                                { uuid = uuid
+                                                , title = title
+                                                , price = Nothing
+                                                , event_type = type_
+                                                }
+                                        , trip = response
+                                    }
 
                                 Just (Information uuid type_ title) ->
-                                    { uuid = Just uuid, title = title, price = Nothing, event_type = type_ }
+                                    { model
+                                        | screen =
+                                            EditEvent (Uuid uuid)
+                                                { uuid = uuid
+                                                , title = title
+                                                , price = Nothing
+                                                , event_type = type_
+                                                }
+                                        , trip = response
+                                    }
 
                                 Just (Activity uuid type_ title price) ->
-                                    { uuid = Just uuid, title = title, price = price, event_type = type_ }
+                                    { model
+                                        | screen =
+                                            EditEvent (Uuid uuid)
+                                                { uuid = uuid
+                                                , title = title
+                                                , price = price
+                                                , event_type = type_
+                                                }
+                                        , trip = response
+                                    }
 
                                 Just (Lodging uuid type_ title price) ->
-                                    { uuid = Just uuid, title = title, price = price, event_type = type_ }
+                                    { model
+                                        | screen =
+                                            EditEvent (Uuid uuid)
+                                                { uuid = uuid
+                                                , title = title
+                                                , price = price
+                                                , event_type = type_
+                                                }
+                                        , trip = response
+                                    }
 
                                 Just (Flight uuid type_ title price) ->
-                                    { uuid = Just uuid, title = title, price = price, event_type = type_ }
+                                    { model
+                                        | screen =
+                                            EditEvent (Uuid uuid)
+                                                { uuid = uuid
+                                                , title = title
+                                                , price = price
+                                                , event_type = type_
+                                                }
+                                        , trip = response
+                                    }
 
                                 Just (Transportation uuid type_ title price) ->
-                                    { uuid = Just uuid, title = title, price = price, event_type = type_ }
+                                    { model
+                                        | screen =
+                                            EditEvent (Uuid uuid)
+                                                { uuid = uuid
+                                                , title = title
+                                                , price = price
+                                                , event_type = type_
+                                                }
+                                        , trip = response
+                                    }
 
                                 Just (Cruise uuid type_ title price) ->
-                                    { uuid = Just uuid, title = title, price = price, event_type = type_ }
+                                    { model
+                                        | screen =
+                                            EditEvent (Uuid uuid)
+                                                { uuid = uuid
+                                                , title = title
+                                                , price = price
+                                                , event_type = type_
+                                                }
+                                        , trip = response
+                                    }
 
                                 Nothing ->
-                                    empty_event
-
-                        _ ->
-                            empty_event
-
-                resolve =
-                    \data -> { model | trip = response, event_form = Just populate_event_form }
+                                    model
 
                 reject =
                     \problems ->
@@ -203,48 +249,26 @@ update msg model =
             in
             Api.processQueryResponse response model resolve reject
 
-        SubmitEvent ->
-            ( model, saveEvent (CreateEvent { uuid = Nothing, title = model.event_title, event_type = model.event_type }) model.session model.trip_id )
-
-        SetEventTitle title ->
-            ( { model | event_title = title }, Cmd.none )
-
-        SetEventType typ_ ->
-            ( { model | event_type = typ_ }, Cmd.none )
+        CreateNewEvent (EventType event_type) ->
+            ( model, saveEvent (CreateEvent { title = "", event_type = event_type }) model.session model.trip_id )
 
         ReportProblem problem ->
             ( { model | problems = [ problem ] }, Cmd.none )
 
+        GotoScreen screen ->
+            ( { model | screen = screen }, Cmd.none )
+
         ShowEvent uuid ->
-            ( { model | event_id = Just uuid }, fetchEvent model.session model.trip_id (Just uuid) )
+            ( model, fetchEvent model.session model.trip_id (Just uuid) )
 
         ClearProblems ->
             ( { model | problems = [] }, Cmd.none )
 
-        ClearEvent ->
-            ( { model | event_id = Nothing, event = RemoteData.NotAsked }, Cmd.none )
+        SubmittedEventForm uuid event_form ->
+            ( model, updateEvent (UpdateEvent event_form) model.session model.trip_id (Just uuid) )
 
-        SubmittedEventForm ->
-            case model.event_form of
-                Just event_form ->
-                    ( model, updateEvent (UpdateEvent event_form) model.session model.trip_id model.event_id )
-
-                Nothing ->
-                    ( { model | problems = [ Problem InvalidData "Event form is not valid" ] }, Cmd.none )
-
-        UpdateEventFormTitle value ->
-            let
-                event_form =
-                    Maybe.map (\o -> { o | title = value }) model.event_form
-            in
-            ( { model | event_form = event_form }, Cmd.none )
-
-        UpdateEventFormPrice value ->
-            let
-                event_form =
-                    Maybe.map (\o -> { o | price = String.toInt value }) model.event_form
-            in
-            ( { model | event_form = event_form }, Cmd.none )
+        UpdateEventForm event_form ->
+            ( { model | screen = EditEvent (Uuid event_form.uuid) event_form }, Cmd.none )
 
 
 
@@ -254,7 +278,7 @@ update msg model =
 
 
 view : Model -> { title : String, content : List (Html Msg) }
-view { trip, session, event_title, problems, event_id, event_form } =
+view { trip, session, problems, screen } =
     { title = "TourFax - Tour Planner"
     , content =
         Page.layout "Planner"
@@ -264,11 +288,20 @@ view { trip, session, event_title, problems, event_id, event_form } =
                         LoggedIn _ viewer ->
                             [ showProblems ClearProblems problems
                             , div []
-                                [ case event_id of
-                                    Just _ ->
+                                [ case screen of
+                                    ListAll ->
+                                        viewTrip trip
+
+                                    EditEvent event_id event_form ->
                                         viewEvent trip event_form
 
-                                    Nothing ->
+                                    ListByType event_type ->
+                                        viewTrip trip
+
+                                    ListDay day ->
+                                        viewTrip trip
+
+                                    Search query ->
                                         viewTrip trip
                                 ]
                             ]
@@ -286,9 +319,9 @@ view { trip, session, event_title, problems, event_id, event_form } =
 -- {{{ viewEvent
 
 
-viewEvent : RemoteData (Graphql.Http.Error UserTrip) UserTrip -> Maybe EventForm -> Html Msg
+viewEvent : RemoteData (Graphql.Http.Error UserTrip) UserTrip -> EventForm -> Html Msg
 viewEvent event event_form =
-    viewRemoteData (viewEventForm (Maybe.withDefault empty_event event_form)) event
+    viewRemoteData (viewEventForm event_form) event
 
 
 
@@ -315,7 +348,7 @@ viewEventForm event_form { event, trips } =
                         [ class "input"
                         , type_ "text"
                         , placeholder "Price"
-                        , onInput UpdateEventFormPrice
+                        , onInput (\o -> UpdateEventForm { event_form | price = String.toInt o })
                         , value (Maybe.withDefault "" (Maybe.map String.fromInt event_form.price))
                         ]
                         []
@@ -337,7 +370,7 @@ viewEventForm event_form { event, trips } =
                 _ ->
                     priceField
     in
-    Html.form [ onSubmit SubmittedEventForm ]
+    Html.form [ onSubmit (SubmittedEventForm (Uuid event_form.uuid) event_form) ]
         [ div [ class "field" ]
             [ breadcrumb
                 [ ( "Home", Route.href Route.Home )
@@ -349,7 +382,7 @@ viewEventForm event_form { event, trips } =
                 [ input
                     [ class "input"
                     , placeholder "Title"
-                    , onInput UpdateEventFormTitle
+                    , onInput (\o -> UpdateEventForm { event_form | title = o })
                     , value event_form.title
                     ]
                     []
@@ -505,35 +538,6 @@ viewTrip remote_response =
 
 
 --}}}
--- {{{ eventForm
-
-
-eventForm =
-    div [ class "columns" ]
-        [ div [ class "column field" ]
-            [ label [ class "label" ] [ text "New Event" ]
-            , div [ class "control has-icons-left has-icons-right" ]
-                [ input
-                    [ onInput SetEventTitle
-                    , class "input"
-                    ]
-                    []
-                ]
-            ]
-        , div [ class "column field" ]
-            [ label [ class "label" ] [ text "New Event" ]
-            , div [ class "control has-icons-left has-icons-right" ]
-                [ select [ onInput SetEventType, class "select" ] (List.map (\o -> option [ value o ] [ text (String.replace "Event::" "" o) ]) event_types) ]
-            ]
-        , div [ class "column field" ]
-            [ div [ class "control has-icons-left has-icons-right" ]
-                [ button [ onClick SubmitEvent, class "button" ] [ text "New Event" ] ]
-            ]
-        ]
-
-
-
--- }}}
 -- {{{ viewEventItem
 
 
@@ -719,7 +723,7 @@ updateEvent event session trip_id event_id =
                 |> Graphql.Http.withHeader "authorization" ("Bearer " ++ Viewer.tokenStr viewer)
                 |> Graphql.Http.send
                     (RemoteData.fromResult
-                        >> GotUpdatedEventResponse
+                        >> GotUpdateEventResponse
                     )
 
         Guest _ ->

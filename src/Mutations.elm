@@ -33,7 +33,7 @@ saveEventMutation inputs trip_id event_id =
                 UpdateEvent { title, uuid, price, event_type } ->
                     \x ->
                         { x
-                            | uuid = fromMaybe uuid
+                            | uuid = Present uuid
                             , title = Present title
                             , price = fromMaybe price
                             , trip_id = Present (Uuid.toString trip_id)

@@ -26,14 +26,13 @@ type EventInputs
 
 
 type alias EventAttributes =
-    { uuid : Maybe String
-    , title : String
+    { title : String
     , event_type : String
     }
 
 
 type alias EventForm =
-    { uuid : Maybe String
+    { uuid : String
     , title : String
     , event_type : String
     , price : Maybe Int
