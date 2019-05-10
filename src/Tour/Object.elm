@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Object exposing (Activity(..), Cruise(..), Dining(..), Flight(..), Info(..), Information(..), Lodging(..), Place(..), SaveEventPayload(..), SaveTripPayload(..), Transportation(..), Trip(..), User(..))
+module Tour.Object exposing (Activity(..), Cruise(..), Dining(..), Flight(..), Info(..), Information(..), Lodging(..), Place(..), SaveEventPayload(..), SaveSectionPayload(..), SaveTripPayload(..), Section(..), Transportation(..), Trip(..), User(..))
 
 
 type Activity
@@ -41,8 +41,16 @@ type SaveEventPayload
     = SaveEventPayload
 
 
+type SaveSectionPayload
+    = SaveSectionPayload
+
+
 type SaveTripPayload
     = SaveTripPayload
+
+
+type Section
+    = Section
 
 
 type Transportation

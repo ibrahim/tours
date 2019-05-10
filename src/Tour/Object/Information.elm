@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Object.Information exposing (day, notes, snippets, title, type_, uuid)
+module Tour.Object.Information exposing (day, notes, section_id, snippets, title, type_, uuid)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -34,14 +34,19 @@ notes =
     Object.selectionForField "(Maybe String)" "notes" [] (Decode.string |> Decode.nullable)
 
 
+section_id : SelectionSet String Tour.Object.Information
+section_id =
+    Object.selectionForField "String" "section_id" [] Decode.string
+
+
 snippets : SelectionSet decodesTo Tour.Union.Snippet -> SelectionSet (Maybe (List (Maybe decodesTo))) Tour.Object.Information
 snippets object_ =
     Object.selectionForCompositeField "snippets" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
 
-title : SelectionSet String Tour.Object.Information
+title : SelectionSet (Maybe String) Tour.Object.Information
 title =
-    Object.selectionForField "String" "title" [] Decode.string
+    Object.selectionForField "(Maybe String)" "title" [] (Decode.string |> Decode.nullable)
 
 
 uuid : SelectionSet String Tour.Object.Information

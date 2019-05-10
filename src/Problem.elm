@@ -10,6 +10,7 @@ type AppError
     | GraphqlError
     | InvalidEntry ValidatedField
     | InvalidData
+    | RecordNotFound
     | ServerError
 
 

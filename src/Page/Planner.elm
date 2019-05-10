@@ -29,16 +29,18 @@ import Viewer exposing (cred, tokenStr, username)
 
 type Msg
     = GotUserTripResponse (RemoteData (Graphql.Http.Error UserTrip) UserTrip)
-    | GotCreateEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
-    | GotUpdateEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
     | GotFetchEventResponse (RemoteData (Graphql.Http.Error UserTrip) UserTrip)
-    | ShowEvent Uuid
-    | GotoScreen Screen
-    | CreateNewEvent EventType
+    | GotCreateEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
+    | GotCreateSectionResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
+    | GotUpdateEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
+    | ShowEvent EventId
+    | Goto Screen
+    | CreateNewEvent EventType SectionId
     | ReportProblem Problem
     | ClearProblems
     | UpdateEventForm EventForm
-    | SubmittedEventForm Uuid EventForm
+    | SubmittedEventForm EventId EventForm
+    | SubmitSection String
 
 
 
@@ -52,16 +54,18 @@ type EventType
 
 type Screen
     = ListAll
-    | ListDay Int
+    | ListSections
+    | ListSection SectionId
     | Search String
     | ListByType EventType
-    | EditEvent Uuid EventForm
+    | EditEvent EventId EventForm
+    | NewSection String
 
 
 type alias Model =
     { session : Session
     , trip : RemoteData (Graphql.Http.Error UserTrip) UserTrip
-    , trip_id : Uuid
+    , trip_id : TripId
     , problems : List Problem
     , screen : Screen
     }
@@ -98,7 +102,7 @@ initial_state session uuid =
     , trip = RemoteData.Loading
     , trip_id = uuid
     , problems = []
-    , screen = ListAll
+    , screen = ListSections
     }
 
 
@@ -138,6 +142,16 @@ update msg model =
             in
             Api.processMutationResponse response model resolve reject
 
+        GotCreateSectionResponse response ->
+            let
+                resolve =
+                    \data -> { model | trip = RemoteData.map (always data) model.trip, screen = ListAll }
+
+                reject =
+                    \problems -> { model | problems = problems }
+            in
+            Api.processMutationResponse response model resolve reject
+
         GotUpdateEventResponse response ->
             let
                 resolve =
@@ -154,11 +168,12 @@ update msg model =
                     case data of
                         { email, event, trips } ->
                             case event of
-                                Just (Dining uuid type_ title) ->
+                                Just (Dining uuid section_id type_ title) ->
                                     { model
                                         | screen =
                                             EditEvent (Uuid uuid)
                                                 { uuid = uuid
+                                                , section_id = section_id
                                                 , title = title
                                                 , price = Nothing
                                                 , event_type = type_
@@ -166,11 +181,12 @@ update msg model =
                                         , trip = response
                                     }
 
-                                Just (Information uuid type_ title) ->
+                                Just (Information uuid section_id type_ title) ->
                                     { model
                                         | screen =
                                             EditEvent (Uuid uuid)
                                                 { uuid = uuid
+                                                , section_id = section_id
                                                 , title = title
                                                 , price = Nothing
                                                 , event_type = type_
@@ -178,11 +194,12 @@ update msg model =
                                         , trip = response
                                     }
 
-                                Just (Activity uuid type_ title price) ->
+                                Just (Activity uuid section_id type_ title price) ->
                                     { model
                                         | screen =
                                             EditEvent (Uuid uuid)
                                                 { uuid = uuid
+                                                , section_id = section_id
                                                 , title = title
                                                 , price = price
                                                 , event_type = type_
@@ -190,11 +207,12 @@ update msg model =
                                         , trip = response
                                     }
 
-                                Just (Lodging uuid type_ title price) ->
+                                Just (Lodging uuid section_id type_ title price) ->
                                     { model
                                         | screen =
                                             EditEvent (Uuid uuid)
                                                 { uuid = uuid
+                                                , section_id = section_id
                                                 , title = title
                                                 , price = price
                                                 , event_type = type_
@@ -202,11 +220,12 @@ update msg model =
                                         , trip = response
                                     }
 
-                                Just (Flight uuid type_ title price) ->
+                                Just (Flight uuid section_id type_ title price) ->
                                     { model
                                         | screen =
                                             EditEvent (Uuid uuid)
                                                 { uuid = uuid
+                                                , section_id = section_id
                                                 , title = title
                                                 , price = price
                                                 , event_type = type_
@@ -214,11 +233,12 @@ update msg model =
                                         , trip = response
                                     }
 
-                                Just (Transportation uuid type_ title price) ->
+                                Just (Transportation section_id uuid type_ title price) ->
                                     { model
                                         | screen =
                                             EditEvent (Uuid uuid)
                                                 { uuid = uuid
+                                                , section_id = section_id
                                                 , title = title
                                                 , price = price
                                                 , event_type = type_
@@ -226,11 +246,12 @@ update msg model =
                                         , trip = response
                                     }
 
-                                Just (Cruise uuid type_ title price) ->
+                                Just (Cruise uuid section_id type_ title price) ->
                                     { model
                                         | screen =
                                             EditEvent (Uuid uuid)
                                                 { uuid = uuid
+                                                , section_id = section_id
                                                 , title = title
                                                 , price = price
                                                 , event_type = type_
@@ -249,13 +270,13 @@ update msg model =
             in
             Api.processQueryResponse response model resolve reject
 
-        CreateNewEvent (EventType event_type) ->
-            ( model, saveEvent (CreateEvent { title = "", event_type = event_type }) model.session model.trip_id )
+        CreateNewEvent (EventType event_type) section_id ->
+            ( model, saveEvent (CreateEvent { title = "", event_type = event_type }) model.session model.trip_id section_id )
 
         ReportProblem problem ->
             ( { model | problems = [ problem ] }, Cmd.none )
 
-        GotoScreen screen ->
+        Goto screen ->
             ( { model | screen = screen }, Cmd.none )
 
         ShowEvent uuid ->
@@ -264,11 +285,22 @@ update msg model =
         ClearProblems ->
             ( { model | problems = [] }, Cmd.none )
 
-        SubmittedEventForm uuid event_form ->
-            ( model, updateEvent (UpdateEvent event_form) model.session model.trip_id (Just uuid) )
+        SubmittedEventForm event_id event_form ->
+            let
+                section_id =
+                    Uuid event_form.section_id
+            in
+            ( model, updateEvent (UpdateEvent event_form) model.session model.trip_id section_id (Just event_id) )
 
         UpdateEventForm event_form ->
             ( { model | screen = EditEvent (Uuid event_form.uuid) event_form }, Cmd.none )
+
+        SubmitSection title ->
+            let
+                section_input =
+                    CreateSection { title = title, trip_id = Uuid.toString model.trip_id }
+            in
+            ( model, saveSection section_input model.session model.trip_id )
 
 
 
@@ -284,31 +316,66 @@ view { trip, session, problems, screen } =
         Page.layout "Planner"
             [ div [ class "container" ]
                 [ div [ class "column is-three-fifths" ]
-                    (case session of
-                        LoggedIn _ viewer ->
-                            [ showProblems ClearProblems problems
-                            , div []
-                                [ case screen of
-                                    ListAll ->
-                                        viewTrip trip
+                    [ div []
+                        [ showProblems ClearProblems problems
+                        , div []
+                            [ case session of
+                                LoggedIn _ viewer ->
+                                    case trip of
+                                        RemoteData.Success user ->
+                                            case List.head user.trips of
+                                                Just trip_ ->
+                                                    case screen of
+                                                        ListAll ->
+                                                            viewTrip screen trip
 
-                                    EditEvent event_id event_form ->
-                                        viewEvent trip event_form
+                                                        EditEvent event_id event_form ->
+                                                            viewEvent trip event_form
 
-                                    ListByType event_type ->
-                                        viewTrip trip
+                                                        ListByType event_type ->
+                                                            viewTrip screen trip
 
-                                    ListDay day ->
-                                        viewTrip trip
+                                                        ListSection section_id ->
+                                                            let
+                                                                section =
+                                                                    getSection section_id trip_.sections
 
-                                    Search query ->
-                                        viewTrip trip
-                                ]
+                                                                trips_events =
+                                                                    List.concatMap (\o -> eventsToRecords o.events) user.trips
+
+                                                                events =
+                                                                    List.concat
+                                                                        [ []
+                                                                        , trips_events
+                                                                        ]
+                                                            in
+                                                            case section of
+                                                                Just section_ ->
+                                                                    viewSectionEvents section_ events
+
+                                                                Nothing ->
+                                                                    text "Section Not Found"
+
+                                                        ListSections ->
+                                                            viewTrip screen trip
+
+                                                        Search query ->
+                                                            viewTrip screen trip
+
+                                                        NewSection title ->
+                                                            sectionForm title
+
+                                                Nothing ->
+                                                    text "Trip Not Found"
+
+                                        _ ->
+                                            text ""
+
+                                Guest _ ->
+                                    text "Unauthenticated"
                             ]
-
-                        Guest _ ->
-                            [ text "Unauthenticated" ]
-                    )
+                        ]
+                    ]
                 ]
             ]
     }
@@ -321,7 +388,7 @@ view { trip, session, problems, screen } =
 
 viewEvent : RemoteData (Graphql.Http.Error UserTrip) UserTrip -> EventForm -> Html Msg
 viewEvent event event_form =
-    viewRemoteData (viewEventForm event_form) event
+    viewData (viewEventForm event_form) event
 
 
 
@@ -332,6 +399,9 @@ viewEvent event event_form =
 viewEventForm : EventForm -> UserTrip -> Html Msg
 viewEventForm event_form { event, trips } =
     let
+        section_id =
+            Uuid event_form.section_id
+
         trip =
             case List.head trips of
                 Just trip_ ->
@@ -361,10 +431,10 @@ viewEventForm event_form { event, trips } =
 
         renderPriceField =
             case event of
-                Just (Dining _ _ _) ->
+                Just (Dining _ _ _ _) ->
                     text ""
 
-                Just (Information _ _ _) ->
+                Just (Information _ _ _ _) ->
                     text ""
 
                 _ ->
@@ -375,15 +445,15 @@ viewEventForm event_form { event, trips } =
             [ breadcrumb
                 [ ( "Home", Route.href Route.Home )
                 , ( trip.name, Route.href <| Route.Planner <| Uuid trip.uuid )
-                , ( event_form.title, Route.href <| Route.Planner <| Uuid trip.uuid )
+                , ( Maybe.withDefault "..." event_form.title, Route.href <| Route.Planner <| Uuid trip.uuid )
                 ]
             , label [ class "label" ] [ text "title" ]
             , div [ class "control has-icons-left has-icons-right" ]
                 [ input
                     [ class "input"
                     , placeholder "Title"
-                    , onInput (\o -> UpdateEventForm { event_form | title = o })
-                    , value event_form.title
+                    , onInput (\o -> UpdateEventForm { event_form | title = Just o })
+                    , value <| Maybe.withDefault "..." event_form.title
                     ]
                     []
                 ]
@@ -473,43 +543,282 @@ viewItiniraryMenu trip =
 --{{{ viewItinirary
 
 
-viewItinirary trip =
+viewItinirary screen trip =
+    let
+        events =
+            eventsToRecords trip.events
+    in
     div []
         [ breadcrumb
             [ ( "Home", Route.href Route.Home )
             , ( trip.name, Route.href <| Route.Planner (Uuid trip.uuid) )
             ]
-        , nav [ class "panel" ]
+        , div []
+            (case screen of
+                ListSections ->
+                    viewSections trip.sections
+
+                ListAll ->
+                    List.map viewEventItem events
+
+                ListSection section_id ->
+                    List.map viewEventItem <|
+                        List.filter (\event -> event.section_id == Uuid.toString section_id) (eventsToRecords trip.events)
+
+                _ ->
+                    [ text "Other Tabs" ]
+            )
+        , div [ class "panel-block" ]
+            [ button [ class "button is-link is-outlined is-fullwidth", onClick (Goto (NewSection "")) ]
+                [ text "Add New Section" ]
+            ]
+        ]
+
+
+
+--}}}
+-- {{{ viewSectionEvents
+
+
+viewEventFull event =
+    div [ class "event-full" ]
+        [ div [ class "title" ]
+            [ text <| Maybe.withDefault "..." event.title ]
+        , p [ class "desc" ]
+            [ text "events notes" ]
+        ]
+
+
+viewSectionEvents section events =
+    let
+        sectionHeader =
+            div [ class "section-hdr level" ]
+                [ div [ class "level-left" ] [ span [ class "level-item ttl" ] [ text section.title ] ]
+                , div [ class "level-right" ]
+                    [ p [ class "level-item" ]
+                        [ createEventButton section.uuid ]
+                    ]
+                ]
+    in
+    div []
+        [ sectionHeader
+        , div [] (List.map viewEventFull events)
+        ]
+
+
+
+-- }}}
+-- {{{ viewSections
+
+
+viewSections sections =
+    let
+        viewSection { uuid, title } =
+            div
+                [ class "section-summary"
+                ]
+                [ div [ class "section-body" ]
+                    [ div [ class "title" ]
+                        [ text title ]
+                    , div [ class "events-icons" ]
+                        (List.repeat 7 (a [ class "event", onClick <| Goto <| ListSection <| Uuid uuid ] []))
+                    ]
+                , div [ class "more" ]
+                    [ a
+                        [ href "", onClick <| Goto <| ListSection <| Uuid uuid ]
+                        [ span [ class "fas fa-chevron-right" ] [] ]
+                    ]
+                ]
+    in
+    List.map viewSection sections
+
+
+
+--}}}
+-- {{{ viewTrip
+
+
+viewTrip screen remote_response =
+    let
+        viewfunc user =
+            div []
+                (user.trips
+                    |> List.map
+                        (\item ->
+                            viewItinirary screen item
+                        )
+                )
+    in
+    viewData viewfunc remote_response
+
+
+
+--}}}
+-- {{{ eventsToRecords
+-- eventsToRecords : List Event -> List EventForm
+
+
+eventsToRecords events =
+    let
+        convert event =
+            case event of
+                Dining uuid section_id event_type title ->
+                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = Nothing }
+
+                Information uuid section_id event_type title ->
+                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = Nothing }
+
+                Activity uuid section_id event_type title price ->
+                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = price }
+
+                Lodging uuid section_id event_type title price ->
+                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = price }
+
+                Flight uuid section_id event_type title price ->
+                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = price }
+
+                Transportation uuid section_id event_type title price ->
+                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = price }
+
+                Cruise uuid section_id event_type title price ->
+                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = price }
+    in
+    List.map convert events
+
+
+
+--}}}
+-- {{{ viewEventItem
+
+
+viewEventItem : EventForm -> Html Msg
+viewEventItem { title, uuid, section_id, price } =
+    a
+        [ class "panel-block is-active", href "", style "justify-content" "space-between", onClick (ShowEvent (Uuid uuid)) ]
+        [ div []
+            [ span [ class "panel-icon" ]
+                [ i [ attribute "aria-hidden" "true", class "fas fa-book" ]
+                    []
+                ]
+            , span [] [ text <| Maybe.withDefault "..." title ]
+            ]
+        , div [ class "tag is-small", style "align-self" "flex-end" ] [ text <| String.fromInt <| Maybe.withDefault 0 price ]
+        ]
+
+
+
+--}}}
+-- {{{ sectionForm
+
+
+sectionForm : String -> Html Msg
+sectionForm title =
+    Html.form [ onSubmit (SubmitSection title) ]
+        [ div [ class "field" ]
+            [ label [ class "label" ] [ text "Section" ]
+            , div [ class "control has-icons-left" ]
+                [ input
+                    [ class "input"
+                    , type_ "text"
+                    , placeholder "Section / Day name"
+                    , onInput (\o -> Goto (NewSection o))
+                    , value title
+                    ]
+                    []
+                , span [ class "icon is-small is-left" ]
+                    [ i [ class "fas fa-book" ] [] ]
+                ]
+            ]
+        , div [ class "field is-grouped" ]
+            [ div [ class "control" ]
+                [ button [ class "button is-link" ] [ text "Create Section" ]
+                ]
+            , div [ class "control" ]
+                [ button [ class "button is-text" ] [ text "Cancel" ]
+                ]
+            ]
+        ]
+
+
+
+-- }}}
+-- {{{ Tabs
+
+
+tab_title : SectionId -> TripWithEvents -> String
+tab_title section_id trip =
+    let
+        section =
+            List.head <| List.filter (\item -> item.uuid == Uuid.toString section_id) trip.sections
+    in
+    Maybe.withDefault "Section" <| Maybe.map (\o -> o.title) section
+
+
+tabs : Screen -> TripWithEvents -> Html Msg
+tabs screen trip =
+    let
+        section_tab =
+            case screen of
+                ListSection section_id ->
+                    [ li [ class "is-active" ] [ a [] [ text (tab_title section_id trip) ] ] ]
+
+                _ ->
+                    []
+
+        is_active tab =
+            case screen of
+                ListSection _ ->
+                    if tab == "section" then
+                        "is-active"
+
+                    else
+                        ""
+
+                ListSections ->
+                    if tab == "sections" then
+                        "is-active"
+
+                    else
+                        ""
+
+                ListAll ->
+                    if tab == "all" then
+                        "is-active"
+
+                    else
+                        ""
+
+                Search _ ->
+                    if tab == "all" then
+                        "is-active"
+
+                    else
+                        ""
+
+                _ ->
+                    ""
+    in
+    div [ class "tabs" ]
+        [ ul []
             (List.concat
-                [ [ p [ class "panel-heading" ]
-                        [ text trip.name ]
-                  , div [ class "panel-block" ]
-                        [ p [ class "control has-icons-left" ]
-                            [ input [ class "input is-small", placeholder "search", type_ "text" ]
-                                []
-                            , span [ class "icon is-small is-left" ]
-                                [ i [ attribute "aria-hidden" "true", class "fas fa-search" ]
-                                    []
-                                ]
+                [ section_tab
+                , [ li [ class (is_active "sections") ]
+                        [ a
+                            [ href ""
+                            , onClick <| Goto ListSections
                             ]
+                            [ text "Sections" ]
                         ]
-                  , p [ class "panel-tabs" ]
-                        [ a [ class "is-active" ]
-                            [ text "all" ]
-                        , a []
-                            [ text "public" ]
-                        , a []
-                            [ text "private" ]
-                        , a []
-                            [ text "sources" ]
-                        , a []
-                            [ text "forks" ]
+                  , li [ class (is_active "all") ]
+                        [ a
+                            [ href ""
+                            , onClick <| Goto ListAll
+                            ]
+                            [ text "All Events" ]
                         ]
-                  ]
-                , List.map viewEventItem trip.events
-                , [ div [ class "panel-block" ]
-                        [ button [ class "button is-link is-outlined is-fullwidth" ]
-                            [ text "reset all filters    " ]
+                  , li [ class (is_active "search") ]
+                        [ a [ href "" ]
+                            [ text "Search" ]
                         ]
                   ]
                 ]
@@ -518,71 +827,41 @@ viewItinirary trip =
 
 
 
---}}}
--- {{{ viewTrip
+-- }}}
+-- {{{ createEventButton
 
 
-viewTrip remote_response =
+createEventButton section_id =
     let
-        viewfunc user =
-            div []
-                (user.trips
-                    |> List.map
-                        (\item ->
-                            viewItinirary item
-                        )
-                )
+        event_name o =
+            String.slice 7 -1 (o ++ " ")
     in
-    viewRemoteData viewfunc remote_response
-
-
-
---}}}
--- {{{ viewEventItem
-
-
-viewEventItem : Event -> Html Msg
-viewEventItem event =
-    case event of
-        Dining uuid _ title ->
-            title_with_price ShowEvent uuid title Nothing
-
-        Information uuid _ title ->
-            title_with_price ShowEvent uuid title Nothing
-
-        Activity uuid _ title price ->
-            title_with_price ShowEvent uuid title price
-
-        Lodging uuid _ title price ->
-            title_with_price ShowEvent uuid title price
-
-        Flight uuid _ title price ->
-            title_with_price ShowEvent uuid title price
-
-        Transportation uuid _ title price ->
-            title_with_price ShowEvent uuid title price
-
-        Cruise uuid _ title price ->
-            title_with_price ShowEvent uuid title price
-
-
-
---}}}
--- {{{ title_with_price
-
-
-title_with_price : (Uuid -> msg) -> String -> String -> Maybe Int -> Html msg
-title_with_price toMsg uuid title price =
-    a
-        [ class "panel-block is-active", href "", style "justify-content" "space-between", onClick (toMsg (Uuid uuid)) ]
-        [ div []
-            [ span [ class "panel-icon" ]
-                [ i [ attribute "aria-hidden" "true", class "fas fa-book" ]
-                    []
+    div
+        [ class "dropdown is-hoverable create-event-menu" ]
+        [ div [ class "dropdown-trigger " ]
+            [ button [ attribute "aria-controls" "dropdown-menu4", attribute "aria-haspopup" "true", class "button  is-primary" ]
+                [ span [ class "icon is-small" ]
+                    [ i [ attribute "aria-hidden" "true", class "fas fa-plus" ]
+                        []
+                    ]
+                , span []
+                    [ text "Add Event" ]
                 ]
-            , span [] [ text title ]
             ]
-        , div [ class "tag is-small", style "align-self" "flex-end" ] [ text <| String.fromInt <| Maybe.withDefault 0 price ]
+        , div [ class "dropdown-menu", id "dropdown-menu4", attribute "role" "menu" ]
+            [ div [ class "dropdown-content" ]
+                (List.map
+                    (\o ->
+                        div [ class "dropdown-item" ]
+                            [ a [ href "", onClick (CreateNewEvent (EventType o) (Uuid section_id)) ]
+                                [ span [ class ("icon fa-" ++ (String.toLower <| event_name o)) ] []
+                                , span [] [ text <| event_name o ]
+                                ]
+                            ]
+                    )
+                    event_types
+                )
+            ]
         ]
 
 
@@ -590,6 +869,15 @@ title_with_price toMsg uuid title price =
 -- }}}
 -- Shared View
 -- {{{
+-- {{{ getSection
+
+
+getSection section_id sections =
+    List.head <| List.filter (\item -> item.uuid == Uuid.toString section_id) sections
+
+
+
+--}}}
 -- {{{ modal
 
 
@@ -648,10 +936,10 @@ breadcrumb pages =
 
 
 -- }}}
---{{{ viewRemoteData
+--{{{ viewData
 
 
-viewRemoteData viewfunc subject =
+viewData viewfunc subject =
     case subject of
         RemoteData.Success data ->
             viewfunc data
@@ -700,11 +988,26 @@ graphqlErrorToString error =
 -- Cmd Msg {{{
 
 
-saveEvent : EventInputs -> Session -> Uuid -> Cmd Msg
-saveEvent event session trip_id =
+saveSection : SectionInputs -> Session -> TripId -> Cmd Msg
+saveSection section session trip_id =
     case session of
         LoggedIn _ viewer ->
-            Mutations.eventRequest event trip_id Nothing
+            Mutations.sectionRequest section trip_id Nothing
+                |> Graphql.Http.withHeader "authorization" ("Bearer " ++ Viewer.tokenStr viewer)
+                |> Graphql.Http.send
+                    (RemoteData.fromResult
+                        >> GotCreateSectionResponse
+                    )
+
+        Guest _ ->
+            Cmd.none
+
+
+saveEvent : EventInputs -> Session -> TripId -> SectionId -> Cmd Msg
+saveEvent event session trip_id section_id =
+    case session of
+        LoggedIn _ viewer ->
+            Mutations.eventRequest event trip_id section_id Nothing
                 |> Graphql.Http.withHeader "authorization" ("Bearer " ++ Viewer.tokenStr viewer)
                 |> Graphql.Http.send
                     (RemoteData.fromResult
@@ -715,11 +1018,11 @@ saveEvent event session trip_id =
             Cmd.none
 
 
-updateEvent : EventInputs -> Session -> Uuid -> Maybe Uuid -> Cmd Msg
-updateEvent event session trip_id event_id =
+updateEvent : EventInputs -> Session -> TripId -> SectionId -> Maybe Uuid -> Cmd Msg
+updateEvent event session trip_id section_id event_id =
     case session of
         LoggedIn _ viewer ->
-            Mutations.eventRequest event trip_id event_id
+            Mutations.eventRequest event trip_id section_id event_id
                 |> Graphql.Http.withHeader "authorization" ("Bearer " ++ Viewer.tokenStr viewer)
                 |> Graphql.Http.send
                     (RemoteData.fromResult

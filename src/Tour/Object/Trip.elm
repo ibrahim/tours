@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Object.Trip exposing (description, download_pdf, events, messaging, name, overview_map, price, start_at, status, uuid)
+module Tour.Object.Trip exposing (description, download_pdf, events, messaging, name, overview_map, price, sections, start_at, status, uuid)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -52,6 +52,11 @@ overview_map =
 price : SelectionSet (Maybe String) Tour.Object.Trip
 price =
     Object.selectionForField "(Maybe String)" "price" [] (Decode.string |> Decode.nullable)
+
+
+sections : SelectionSet decodesTo Tour.Object.Section -> SelectionSet (List decodesTo) Tour.Object.Trip
+sections object_ =
+    Object.selectionForCompositeField "sections" [] object_ (identity >> Decode.list)
 
 
 start_at : SelectionSet (Maybe String) Tour.Object.Trip

@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Mutation exposing (SaveEventRequiredArguments, SaveTripRequiredArguments, saveEvent, saveTrip)
+module Tour.Mutation exposing (SaveEventRequiredArguments, SaveSectionRequiredArguments, SaveTripRequiredArguments, saveEvent, saveSection, saveTrip)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -26,6 +26,15 @@ type alias SaveEventRequiredArguments =
 saveEvent : SaveEventRequiredArguments -> SelectionSet decodesTo Tour.Object.SaveEventPayload -> SelectionSet (Maybe decodesTo) RootMutation
 saveEvent requiredArgs object_ =
     Object.selectionForCompositeField "saveEvent" [ Argument.required "input" requiredArgs.input Tour.InputObject.encodeSaveEventInput ] object_ (identity >> Decode.nullable)
+
+
+type alias SaveSectionRequiredArguments =
+    { input : Tour.InputObject.SaveSectionInput }
+
+
+saveSection : SaveSectionRequiredArguments -> SelectionSet decodesTo Tour.Object.SaveSectionPayload -> SelectionSet (Maybe decodesTo) RootMutation
+saveSection requiredArgs object_ =
+    Object.selectionForCompositeField "saveSection" [ Argument.required "input" requiredArgs.input Tour.InputObject.encodeSaveSectionInput ] object_ (identity >> Decode.nullable)
 
 
 type alias SaveTripRequiredArguments =

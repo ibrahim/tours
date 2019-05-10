@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.InputObject exposing (SaveEventInput, SaveEventInputOptionalFields, SaveTripInput, SaveTripInputOptionalFields, buildSaveEventInput, buildSaveTripInput, encodeSaveEventInput, encodeSaveTripInput)
+module Tour.InputObject exposing (SaveEventInput, SaveEventInputOptionalFields, SaveEventInputRequiredFields, SaveSectionInput, SaveSectionInputOptionalFields, SaveSectionInputRequiredFields, SaveTripInput, SaveTripInputOptionalFields, buildSaveEventInput, buildSaveSectionInput, buildSaveTripInput, encodeSaveEventInput, encodeSaveSectionInput, encodeSaveTripInput)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -17,20 +17,26 @@ import Tour.ScalarCodecs
 import Tour.Union
 
 
-buildSaveEventInput : (SaveEventInputOptionalFields -> SaveEventInputOptionalFields) -> SaveEventInput
-buildSaveEventInput fillOptionals =
+buildSaveEventInput : SaveEventInputRequiredFields -> (SaveEventInputOptionalFields -> SaveEventInputOptionalFields) -> SaveEventInput
+buildSaveEventInput required fillOptionals =
     let
         optionals =
             fillOptionals
-                { clientMutationId = Absent, uuid = Absent, type_ = Absent, title = Absent, notes = Absent, price = Absent, currency = Absent, starts_at = Absent, duration = Absent, day = Absent, trip_id = Absent }
+                { clientMutationId = Absent, uuid = Absent, title = Absent, notes = Absent, price = Absent, currency = Absent, starts_at = Absent, duration = Absent, day = Absent }
     in
-    { clientMutationId = optionals.clientMutationId, uuid = optionals.uuid, type_ = optionals.type_, title = optionals.title, notes = optionals.notes, price = optionals.price, currency = optionals.currency, starts_at = optionals.starts_at, duration = optionals.duration, day = optionals.day, trip_id = optionals.trip_id }
+    { clientMutationId = optionals.clientMutationId, trip_id = required.trip_id, type_ = required.type_, section_id = required.section_id, uuid = optionals.uuid, title = optionals.title, notes = optionals.notes, price = optionals.price, currency = optionals.currency, starts_at = optionals.starts_at, duration = optionals.duration, day = optionals.day }
+
+
+type alias SaveEventInputRequiredFields =
+    { trip_id : String
+    , type_ : String
+    , section_id : String
+    }
 
 
 type alias SaveEventInputOptionalFields =
     { clientMutationId : OptionalArgument String
     , uuid : OptionalArgument String
-    , type_ : OptionalArgument String
     , title : OptionalArgument String
     , notes : OptionalArgument String
     , price : OptionalArgument Int
@@ -38,7 +44,6 @@ type alias SaveEventInputOptionalFields =
     , starts_at : OptionalArgument String
     , duration : OptionalArgument Int
     , day : OptionalArgument Int
-    , trip_id : OptionalArgument String
     }
 
 
@@ -46,8 +51,10 @@ type alias SaveEventInputOptionalFields =
 -}
 type alias SaveEventInput =
     { clientMutationId : OptionalArgument String
+    , trip_id : String
+    , type_ : String
+    , section_id : String
     , uuid : OptionalArgument String
-    , type_ : OptionalArgument String
     , title : OptionalArgument String
     , notes : OptionalArgument String
     , price : OptionalArgument Int
@@ -55,7 +62,6 @@ type alias SaveEventInput =
     , starts_at : OptionalArgument String
     , duration : OptionalArgument Int
     , day : OptionalArgument Int
-    , trip_id : OptionalArgument String
     }
 
 
@@ -64,7 +70,53 @@ type alias SaveEventInput =
 encodeSaveEventInput : SaveEventInput -> Value
 encodeSaveEventInput input =
     Encode.maybeObject
-        [ ( "clientMutationId", Encode.string |> Encode.optional input.clientMutationId ), ( "uuid", Encode.string |> Encode.optional input.uuid ), ( "_type", Encode.string |> Encode.optional input.type_ ), ( "title", Encode.string |> Encode.optional input.title ), ( "notes", Encode.string |> Encode.optional input.notes ), ( "price", Encode.int |> Encode.optional input.price ), ( "currency", Encode.string |> Encode.optional input.currency ), ( "starts_at", Encode.string |> Encode.optional input.starts_at ), ( "duration", Encode.int |> Encode.optional input.duration ), ( "day", Encode.int |> Encode.optional input.day ), ( "trip_id", Encode.string |> Encode.optional input.trip_id ) ]
+        [ ( "clientMutationId", Encode.string |> Encode.optional input.clientMutationId ), ( "trip_id", Encode.string input.trip_id |> Just ), ( "_type", Encode.string input.type_ |> Just ), ( "section_id", Encode.string input.section_id |> Just ), ( "uuid", Encode.string |> Encode.optional input.uuid ), ( "title", Encode.string |> Encode.optional input.title ), ( "notes", Encode.string |> Encode.optional input.notes ), ( "price", Encode.int |> Encode.optional input.price ), ( "currency", Encode.string |> Encode.optional input.currency ), ( "starts_at", Encode.string |> Encode.optional input.starts_at ), ( "duration", Encode.int |> Encode.optional input.duration ), ( "day", Encode.int |> Encode.optional input.day ) ]
+
+
+buildSaveSectionInput : SaveSectionInputRequiredFields -> (SaveSectionInputOptionalFields -> SaveSectionInputOptionalFields) -> SaveSectionInput
+buildSaveSectionInput required fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { clientMutationId = Absent, uuid = Absent, is_day = Absent, day_date = Absent, day_order = Absent }
+    in
+    { clientMutationId = optionals.clientMutationId, trip_id = required.trip_id, title = required.title, uuid = optionals.uuid, is_day = optionals.is_day, day_date = optionals.day_date, day_order = optionals.day_order }
+
+
+type alias SaveSectionInputRequiredFields =
+    { trip_id : String
+    , title : String
+    }
+
+
+type alias SaveSectionInputOptionalFields =
+    { clientMutationId : OptionalArgument String
+    , uuid : OptionalArgument String
+    , is_day : OptionalArgument Bool
+    , day_date : OptionalArgument Int
+    , day_order : OptionalArgument Int
+    }
+
+
+{-| Type for the SaveSectionInput input object.
+-}
+type alias SaveSectionInput =
+    { clientMutationId : OptionalArgument String
+    , trip_id : String
+    , title : String
+    , uuid : OptionalArgument String
+    , is_day : OptionalArgument Bool
+    , day_date : OptionalArgument Int
+    , day_order : OptionalArgument Int
+    }
+
+
+{-| Encode a SaveSectionInput into a value that can be used as an argument.
+-}
+encodeSaveSectionInput : SaveSectionInput -> Value
+encodeSaveSectionInput input =
+    Encode.maybeObject
+        [ ( "clientMutationId", Encode.string |> Encode.optional input.clientMutationId ), ( "trip_id", Encode.string input.trip_id |> Just ), ( "title", Encode.string input.title |> Just ), ( "uuid", Encode.string |> Encode.optional input.uuid ), ( "is_day", Encode.bool |> Encode.optional input.is_day ), ( "day_date", Encode.int |> Encode.optional input.day_date ), ( "day_order", Encode.int |> Encode.optional input.day_order ) ]
 
 
 buildSaveTripInput : (SaveTripInputOptionalFields -> SaveTripInputOptionalFields) -> SaveTripInput
