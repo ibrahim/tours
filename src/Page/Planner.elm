@@ -330,7 +330,7 @@ view { trip, session, problems, screen } =
                                                             viewTrip screen trip
 
                                                         EditEvent event_id event_form ->
-                                                            viewEvent trip event_form
+                                                            viewEventForm event_form trip_
 
                                                         ListByType event_type ->
                                                             viewTrip screen trip
@@ -340,18 +340,12 @@ view { trip, session, problems, screen } =
                                                                 section =
                                                                     getSection section_id trip_.sections
 
-                                                                trips_events =
-                                                                    List.concatMap (\o -> eventsToRecords o.events) user.trips
-
                                                                 events =
-                                                                    List.concat
-                                                                        [ []
-                                                                        , trips_events
-                                                                        ]
+                                                                    List.concatMap (\o -> eventsToRecords o.events) user.trips
                                                             in
                                                             case section of
                                                                 Just section_ ->
-                                                                    viewSectionEvents section_ events
+                                                                    viewSectionEvents section_ events trip_
 
                                                                 Nothing ->
                                                                     text "Section Not Found"
@@ -386,9 +380,9 @@ view { trip, session, problems, screen } =
 -- {{{ viewEvent
 
 
-viewEvent : RemoteData (Graphql.Http.Error UserTrip) UserTrip -> EventForm -> Html Msg
-viewEvent event event_form =
-    viewData (viewEventForm event_form) event
+viewEvent : EventForm -> TripWithEvents -> Html Msg
+viewEvent event_form trip =
+    viewEventForm event_form trip
 
 
 
@@ -396,19 +390,19 @@ viewEvent event event_form =
 -- {{{ viewEventForm
 
 
-viewEventForm : EventForm -> UserTrip -> Html Msg
-viewEventForm event_form { event, trips } =
+viewEventForm : EventForm -> TripWithEvents -> Html Msg
+viewEventForm event_form trip =
     let
-        section_id =
-            Uuid event_form.section_id
+        section =
+            getSection (Uuid event_form.section_id) trip.sections
 
-        trip =
-            case List.head trips of
-                Just trip_ ->
-                    { name = trip_.name, uuid = trip_.uuid }
+        section_title =
+            case section of
+                Just section_ ->
+                    section_.title
 
                 Nothing ->
-                    { name = "N/A", uuid = "N/A" }
+                    "Section"
 
         priceField =
             div [ class "field" ]
@@ -430,22 +424,20 @@ viewEventForm event_form { event, trips } =
                 ]
 
         renderPriceField =
-            case event of
-                Just (Dining _ _ _ _) ->
-                    text ""
-
-                Just (Information _ _ _ _) ->
-                    text ""
-
-                _ ->
+            case event_form.price of
+                Just price ->
                     priceField
+
+                Nothing ->
+                    text ""
     in
     Html.form [ onSubmit (SubmittedEventForm (Uuid event_form.uuid) event_form) ]
         [ div [ class "field" ]
             [ breadcrumb
-                [ ( "Home", Route.href Route.Home )
-                , ( trip.name, Route.href <| Route.Planner <| Uuid trip.uuid )
-                , ( Maybe.withDefault "..." event_form.title, Route.href <| Route.Planner <| Uuid trip.uuid )
+                [ ( "Home", Href (Route.href Route.Home) )
+                , ( trip.name, Href (Route.href <| Route.Planner <| Uuid trip.uuid) )
+                , ( section_title, OnClick (onClick <| Goto <| ListSection <| Uuid <| event_form.section_id) )
+                , ( Maybe.withDefault "..." event_form.title, Href (Route.href <| Route.Planner <| Uuid trip.uuid) )
                 ]
             , label [ class "label" ] [ text "title" ]
             , div [ class "control has-icons-left has-icons-right" ]
@@ -453,7 +445,7 @@ viewEventForm event_form { event, trips } =
                     [ class "input"
                     , placeholder "Title"
                     , onInput (\o -> UpdateEventForm { event_form | title = Just o })
-                    , value <| Maybe.withDefault "..." event_form.title
+                    , value <| Maybe.withDefault "" event_form.title
                     ]
                     []
                 ]
@@ -550,8 +542,8 @@ viewItinirary screen trip =
     in
     div []
         [ breadcrumb
-            [ ( "Home", Route.href Route.Home )
-            , ( trip.name, Route.href <| Route.Planner (Uuid trip.uuid) )
+            [ ( "Home", Href (Route.href Route.Home) )
+            , ( trip.name, Href (Route.href <| Route.Planner (Uuid trip.uuid)) )
             ]
         , div []
             (case screen of
@@ -582,18 +574,28 @@ viewItinirary screen trip =
 
 viewEventFull event =
     div [ class "event-full" ]
-        [ div [ class "title" ]
-            [ text <| Maybe.withDefault "..." event.title ]
-        , p [ class "desc" ]
-            [ text "events notes" ]
+        [ div [ class "side" ]
+            [ span [ class "sign" ] [ span [ class <| "icon " ++ " fa-" ++ (String.toLower <| event_name event.event_type) ] [] ]
+            ]
+        , div [ class "body" ]
+            [ div [ class "event-title" ]
+                [ a
+                    [ href ""
+                    , onClick <| ShowEvent (Uuid event.uuid)
+                    ]
+                    [ text <| Maybe.withDefault "..." event.title ]
+                ]
+            , p [ class "event-desc" ]
+                [ text "events notes" ]
+            ]
         ]
 
 
-viewSectionEvents section events =
+viewSectionEvents section events trip =
     let
         sectionHeader =
             div [ class "section-hdr level" ]
-                [ div [ class "level-left" ] [ span [ class "level-item ttl" ] [ text section.title ] ]
+                [ div [ class "level-left" ] [ span [ class "level-item title" ] [ text section.title ] ]
                 , div [ class "level-right" ]
                     [ p [ class "level-item" ]
                         [ createEventButton section.uuid ]
@@ -601,7 +603,12 @@ viewSectionEvents section events =
                 ]
     in
     div []
-        [ sectionHeader
+        [ breadcrumb
+            [ ( "Home", Href (Route.href Route.Home) )
+            , ( trip.name, Href (Route.href <| Route.Planner (Uuid trip.uuid)) )
+            , ( section.title, OnClick (onClick <| Goto <| ListSection <| Uuid section.uuid) )
+            ]
+        , sectionHeader
         , div [] (List.map viewEventFull events)
         ]
 
@@ -831,11 +838,11 @@ tabs screen trip =
 -- {{{ createEventButton
 
 
+event_name o =
+    String.slice 7 -1 (o ++ " ")
+
+
 createEventButton section_id =
-    let
-        event_name o =
-            String.slice 7 -1 (o ++ " ")
-    in
     div
         [ class "dropdown is-hoverable create-event-menu" ]
         [ div [ class "dropdown-trigger " ]
@@ -872,6 +879,7 @@ createEventButton section_id =
 -- {{{ getSection
 
 
+getSection : Uuid -> List Section -> Maybe Section
 getSection section_id sections =
     List.head <| List.filter (\item -> item.uuid == Uuid.toString section_id) sections
 
@@ -897,7 +905,12 @@ modal toMsg content =
 -- {{{ breadcrumb
 
 
-breadcrumb : List ( String, Attribute msg ) -> Html msg
+type LinkAttr msg
+    = Href (Attribute msg)
+    | OnClick (Attribute msg)
+
+
+breadcrumb : List ( String, LinkAttr msg ) -> Html msg
 breadcrumb pages =
     let
         is_last idx =
@@ -919,7 +932,13 @@ breadcrumb pages =
 
         render idx ( title, attr_msg ) =
             li [ class (is_active idx) ]
-                [ a [ is_current idx, attr_msg ]
+                [ (case attr_msg of
+                    Href attr_ ->
+                        a [ is_current idx, attr_ ]
+
+                    OnClick attr_ ->
+                        a [ is_current idx, href "", attr_ ]
+                  )
                     [ text title ]
                 ]
 

@@ -33,14 +33,16 @@
   background-color: #fff
   padding: 10px
   border-bottom: 1px solid #ddd
+  .title
+    font: 400 20px Roboto
 // }}}
 // {{{ Create Event Button
 .create-event-menu
   .dropdown-item
     a
       text-transform: capitalize
-      display: block
       display: flex
+      margin: 5px 0px
       align-items: center
       span
         font-size: 15px
@@ -50,4 +52,40 @@
       span.fa-activity
         font-size: 16px
 // }}}
+// {{{ Event Full
+.event-full
+  display: flex
+  flex-flow: row
+  .body
+    padding: 0px 10px 40px 20px
+    .event-title
+      a
+        display: flex
+        font: 400 17px Roboto
+        margin-top: 5px
+        color: #000!important
+    .event-desc
+      font: 300 16px Roboto
+  .side
+    flex-basis: 40px
+    position: relative
+    border-right: 2px solid #aaa
+    .sign
+      display: flex
+      width: 32px
+      height: 32px
+      border-radius: 16px
+      background-color: #fff
+      border: 2px solid #aaa
+      position: absolute
+      right: -16px
+      top: 0px
+      align-items: center
+      justify-content: center
+      .icon
+        color: #aaa
+        font-size: 20px
+
+
+//}}}
 
