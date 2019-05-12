@@ -1,3 +1,16 @@
+$polished-copper: #c96e4b
+$millineal-pink: #efb6bf
+$one-million-likes: #f93c71
+$succulent: #3ad566
+$burnt-sienna: #d04918
+$harvest-gold: #f9ac3d
+$avocado: #758c34
+$teak: #975914
+$natural: #b59b74
+$blue-mustang: #2d748c
+$brass-gold: #cdab57
+$social-bubble: #0981fe
+$slate: #617d8c
 
 // {{{ Section Summary
 .section-summary
@@ -85,6 +98,35 @@
       .icon
         color: #aaa
         font-size: 20px
+    .sign.activity
+      border: 2px solid $slate
+      .icon
+        color: $slate
+        font-size: 16px
+    .sign.flight
+      border: 2px solid $brass-gold
+      .icon
+        color: $brass-gold
+    .sign.dining
+      border: 2px solid $one-million-likes
+      .icon
+        color: $one-million-likes
+    .sign.lodging
+      border: 2px solid $polished-copper
+      .icon
+        color: $polished-copper
+    .sign.transportation
+      border: 2px solid $millineal-pink
+      .icon
+        color: $millineal-pink
+    .sign.cruise
+      border: 2px solid $succulent
+      .icon
+        color: $succulent
+    .sign.information
+      border: 2px solid $social-bubble
+      .icon
+        color: $social-bubble
 
 
 //}}}
@@ -92,7 +134,37 @@
 .edit-event
   form
     margin-bottom: 20px
-    .hide
-      
-    .show
+    .flipper
+      height: 30px
+      .hide
+        translates
+      .show
+//}}}
+//{{{ Flip Button Animation
+.flip-horizontal-bottom
+  animation: flip-horizontal-bottom 0.4s cubic-bezier(0.455, 0.030, 0.515, 0.955) both
+  transform-style: preserve-3d
+  backface-visibility: hidden
+  backface-visibility: hidden
+
+@keyframes flip-horizontal-bottom
+  0%
+    transform: rotateX(-180deg)
+    transform: rotateX(-180deg)
+  100% 
+    transform: rotateX(0)
+
+.flip-horizontal-top
+  animation: flip-horizontal-top 0.4s cubic-bezier(0.455, 0.030, 0.515, 0.955) both
+  transform-style: preserve-3d
+  backface-visibility: hidden
+  backface-visibility: hidden
+
+@keyframes flip-horizontal-top 
+  0%
+    transform: rotateX(180deg)
+    transform: rotateX(180deg)
+  100%
+    transform: rotateX(0)
+
 //}}}

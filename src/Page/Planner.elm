@@ -548,27 +548,28 @@ viewEventForm screen event_form trip =
             [ div [ class "control" ]
                 [ button [ class "button is-link", href "", onClick (SubmittedEventForm (Uuid event_form.uuid) event_form) ] [ text "Done" ]
                 ]
-            , div [ class "flipper" ]
-                [ input [ type_ "checkbox", checked is_confirmed ] []
-                , div [ class "cntr" ]
-                    [ div [ class "front" ]
-                        [ button
-                            [ class <| "button is-text has-text-danger"
-                            , href ""
-                            , onClick <| DeleteEvent
-                            , onBlur <| Goto <| EditEvent (Uuid event_form.uuid) event_form UnconfirmedDelete
-                            ]
-                            [ text "Delete Event" ]
-                        ]
-                    , div [ class "back" ]
-                        [ button
-                            [ class <| "button is-danger"
-                            , href ""
-                            , onClick <| ConfirmedDeleteEvent <| Uuid event_form.uuid
-                            , onBlur <| Goto <| EditEvent (Uuid event_form.uuid) event_form UnconfirmedDelete
-                            ]
-                            [ text "Confirm Delete!" ]
-                        ]
+            , div []
+                [ button
+                    [ class <|
+                        if is_confirmed then
+                            "button is-danger flip-horizontal-top"
+
+                        else
+                            "button has-text-danger is-text flip-horizontal-bottom"
+                    , href ""
+                    , if is_confirmed then
+                        onClick <| ConfirmedDeleteEvent <| Uuid event_form.uuid
+
+                      else
+                        onClick <| DeleteEvent
+                    , onBlur <| Goto <| EditEvent (Uuid event_form.uuid) event_form UnconfirmedDelete
+                    ]
+                    [ text <|
+                        if is_confirmed then
+                            "Confirm Delete!"
+
+                        else
+                            "Delete Event"
                     ]
                 ]
             ]
@@ -686,9 +687,13 @@ viewItinirary screen trip =
 
 
 viewEventFull event =
+    let
+        event_name_ =
+            String.toLower <| event_name event.event_type
+    in
     div [ class "event-full" ]
         [ div [ class "side" ]
-            [ span [ class "sign" ] [ span [ class <| "icon " ++ " fa-" ++ (String.toLower <| event_name event.event_type) ] [] ]
+            [ span [ class <| "sign " ++ event_name_ ] [ span [ class <| "icon " ++ " fa-" ++ event_name_ ] [] ]
             ]
         , div [ class "body" ]
             [ div [ class "event-title" ]
