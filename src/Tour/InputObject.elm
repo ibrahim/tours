@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.InputObject exposing (SaveEventInput, SaveEventInputOptionalFields, SaveEventInputRequiredFields, SaveSectionInput, SaveSectionInputOptionalFields, SaveSectionInputRequiredFields, SaveTripInput, SaveTripInputOptionalFields, buildSaveEventInput, buildSaveSectionInput, buildSaveTripInput, encodeSaveEventInput, encodeSaveSectionInput, encodeSaveTripInput)
+module Tour.InputObject exposing (DeleteEventInput, DeleteEventInputOptionalFields, DeleteEventInputRequiredFields, SaveEventInput, SaveEventInputOptionalFields, SaveEventInputRequiredFields, SaveSectionInput, SaveSectionInputOptionalFields, SaveSectionInputRequiredFields, SaveTripInput, SaveTripInputOptionalFields, buildDeleteEventInput, buildSaveEventInput, buildSaveSectionInput, buildSaveTripInput, encodeDeleteEventInput, encodeSaveEventInput, encodeSaveSectionInput, encodeSaveTripInput)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -15,6 +15,43 @@ import Tour.Object
 import Tour.Scalar
 import Tour.ScalarCodecs
 import Tour.Union
+
+
+buildDeleteEventInput : DeleteEventInputRequiredFields -> (DeleteEventInputOptionalFields -> DeleteEventInputOptionalFields) -> DeleteEventInput
+buildDeleteEventInput required fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { clientMutationId = Absent }
+    in
+    { clientMutationId = optionals.clientMutationId, trip_id = required.trip_id, uuid = required.uuid }
+
+
+type alias DeleteEventInputRequiredFields =
+    { trip_id : String
+    , uuid : String
+    }
+
+
+type alias DeleteEventInputOptionalFields =
+    { clientMutationId : OptionalArgument String }
+
+
+{-| Type for the DeleteEventInput input object.
+-}
+type alias DeleteEventInput =
+    { clientMutationId : OptionalArgument String
+    , trip_id : String
+    , uuid : String
+    }
+
+
+{-| Encode a DeleteEventInput into a value that can be used as an argument.
+-}
+encodeDeleteEventInput : DeleteEventInput -> Value
+encodeDeleteEventInput input =
+    Encode.maybeObject
+        [ ( "clientMutationId", Encode.string |> Encode.optional input.clientMutationId ), ( "trip_id", Encode.string input.trip_id |> Just ), ( "uuid", Encode.string input.uuid |> Just ) ]
 
 
 buildSaveEventInput : SaveEventInputRequiredFields -> (SaveEventInputOptionalFields -> SaveEventInputOptionalFields) -> SaveEventInput

@@ -1,4 +1,4 @@
-module Mutations exposing (eventRequest, sectionRequest)
+module Mutations exposing (deleteEventRequest, eventRequest, sectionRequest)
 
 -- import Page.Planner exposing (Msg(..))
 
@@ -9,9 +9,10 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..), fromMaybe)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet(..), hardcoded, with)
 import Queries
 import RemoteData exposing (RemoteData)
-import Tour.InputObject exposing (SaveEventInput, buildSaveEventInput, buildSaveSectionInput)
+import Tour.InputObject exposing (SaveEventInput, buildDeleteEventInput, buildSaveEventInput, buildSaveSectionInput)
 import Tour.Mutation as Mutation exposing (SaveEventRequiredArguments)
 import Tour.Object
+import Tour.Object.DeleteEventPayload as DeleteEventPayload exposing (user)
 import Tour.Object.SaveEventPayload as SaveEventPayload exposing (user)
 import Tour.Object.SaveSectionPayload as SaveSectionPayload exposing (user)
 import Types exposing (..)
@@ -104,4 +105,32 @@ saveEventMutation inputs trip_id section_id event_id =
 eventRequest : EventInputs -> TripId -> SectionId -> Maybe EventId -> Graphql.Http.Request (Maybe UserTrip)
 eventRequest event trip_id section_id event_id =
     saveEventMutation event trip_id section_id event_id
+        |> Graphql.Http.mutationRequest Api.endpoint
+
+
+
+-- Delete Event
+
+
+deleteEventMutation : TripId -> EventId -> SelectionSet (Maybe UserTrip) RootMutation
+deleteEventMutation trip_id event_id =
+    let
+        required_args =
+            { trip_id = Uuid.toString trip_id, uuid = Uuid.toString event_id }
+
+        deleteEventInput =
+            { input =
+                buildDeleteEventInput required_args identity
+            }
+    in
+    Mutation.deleteEvent deleteEventInput <| DeleteEventPayload.user <| Queries.userTripSelection trip_id (Just event_id)
+
+
+
+-- |> SelectionSet.map (\event -> case event of Just event -> event Nothing -> )
+
+
+deleteEventRequest : TripId -> EventId -> Graphql.Http.Request (Maybe UserTrip)
+deleteEventRequest trip_id event_id =
+    deleteEventMutation trip_id event_id
         |> Graphql.Http.mutationRequest Api.endpoint

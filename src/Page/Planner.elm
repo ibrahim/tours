@@ -6,7 +6,7 @@ import Graphql.Http
 import Graphql.Http.GraphqlError
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html.Events exposing (onBlur, onClick, onInput, onSubmit)
 import Http
 import Mutations
 import Page exposing (header, layout)
@@ -31,9 +31,12 @@ type Msg
     = GotUserTripResponse (RemoteData (Graphql.Http.Error UserTrip) UserTrip)
     | GotFetchEventResponse (RemoteData (Graphql.Http.Error UserTrip) UserTrip)
     | GotCreateEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
+    | GotDeleteEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
     | GotCreateSectionResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
     | GotUpdateEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
     | ShowEvent EventId
+    | DeleteEvent
+    | ConfirmedDeleteEvent EventId
     | Goto Screen
     | CreateNewEvent EventType SectionId
     | ReportProblem Problem
@@ -41,6 +44,7 @@ type Msg
     | UpdateEventForm EventForm
     | SubmittedEventForm EventId EventForm
     | SubmitSection String
+    | NoOp
 
 
 
@@ -52,13 +56,18 @@ type EventType
     = EventType String
 
 
+type Deletion
+    = UnconfirmedDelete
+    | ConfirmedDelete
+
+
 type Screen
     = ListAll
     | ListSections
     | ListSection SectionId
     | Search String
     | ListByType EventType
-    | EditEvent EventId EventForm
+    | EditEvent EventId EventForm Deletion
     | NewSection String
 
 
@@ -142,6 +151,36 @@ update msg model =
             in
             Api.processMutationResponse response model resolve reject
 
+        GotDeleteEventResponse response ->
+            let
+                section_id =
+                    case model.screen of
+                        EditEvent _ event_form _ ->
+                            Just event_form.section_id
+
+                        _ ->
+                            Nothing
+
+                next_screen =
+                    case section_id of
+                        Just uuid ->
+                            ListSection <| Uuid uuid
+
+                        Nothing ->
+                            ListSections
+
+                resolve =
+                    \data ->
+                        { model
+                            | trip = RemoteData.map (always data) model.trip
+                            , screen = next_screen
+                        }
+
+                reject =
+                    \problems -> { model | problems = problems }
+            in
+            Api.processMutationResponse response model resolve reject
+
         GotCreateSectionResponse response ->
             let
                 resolve =
@@ -154,8 +193,31 @@ update msg model =
 
         GotUpdateEventResponse response ->
             let
+                screen =
+                    model.screen
+
+                section_id =
+                    case screen of
+                        EditEvent _ event_form _ ->
+                            Just event_form.section_id
+
+                        same ->
+                            Nothing
+
+                new_screen =
+                    case section_id of
+                        Just uuid ->
+                            ListSection <| Uuid uuid
+
+                        Nothing ->
+                            ListSections
+
                 resolve =
-                    \data -> { model | trip = RemoteData.map (always data) model.trip }
+                    \data ->
+                        { model
+                            | screen = new_screen
+                            , trip = RemoteData.map (always data) model.trip
+                        }
 
                 reject =
                     \problems -> { model | problems = problems }
@@ -178,6 +240,7 @@ update msg model =
                                                 , price = Nothing
                                                 , event_type = type_
                                                 }
+                                                UnconfirmedDelete
                                         , trip = response
                                     }
 
@@ -191,6 +254,7 @@ update msg model =
                                                 , price = Nothing
                                                 , event_type = type_
                                                 }
+                                                UnconfirmedDelete
                                         , trip = response
                                     }
 
@@ -204,6 +268,7 @@ update msg model =
                                                 , price = price
                                                 , event_type = type_
                                                 }
+                                                UnconfirmedDelete
                                         , trip = response
                                     }
 
@@ -217,6 +282,7 @@ update msg model =
                                                 , price = price
                                                 , event_type = type_
                                                 }
+                                                UnconfirmedDelete
                                         , trip = response
                                     }
 
@@ -230,10 +296,11 @@ update msg model =
                                                 , price = price
                                                 , event_type = type_
                                                 }
+                                                UnconfirmedDelete
                                         , trip = response
                                     }
 
-                                Just (Transportation section_id uuid type_ title price) ->
+                                Just (Transportation uuid section_id type_ title price) ->
                                     { model
                                         | screen =
                                             EditEvent (Uuid uuid)
@@ -243,6 +310,7 @@ update msg model =
                                                 , price = price
                                                 , event_type = type_
                                                 }
+                                                UnconfirmedDelete
                                         , trip = response
                                     }
 
@@ -256,6 +324,7 @@ update msg model =
                                                 , price = price
                                                 , event_type = type_
                                                 }
+                                                UnconfirmedDelete
                                         , trip = response
                                     }
 
@@ -292,8 +361,26 @@ update msg model =
             in
             ( model, updateEvent (UpdateEvent event_form) model.session model.trip_id section_id (Just event_id) )
 
+        DeleteEvent ->
+            let
+                screen =
+                    model.screen
+
+                new_screen =
+                    case screen of
+                        EditEvent uuid event_form _ ->
+                            EditEvent uuid event_form ConfirmedDelete
+
+                        same ->
+                            same
+            in
+            ( { model | screen = new_screen }, Cmd.none )
+
+        ConfirmedDeleteEvent event_id ->
+            ( model, deleteEvent model.session model.trip_id event_id )
+
         UpdateEventForm event_form ->
-            ( { model | screen = EditEvent (Uuid event_form.uuid) event_form }, Cmd.none )
+            ( { model | screen = EditEvent (Uuid event_form.uuid) event_form UnconfirmedDelete }, Cmd.none )
 
         SubmitSection title ->
             let
@@ -301,6 +388,9 @@ update msg model =
                     CreateSection { title = title, trip_id = Uuid.toString model.trip_id }
             in
             ( model, saveSection section_input model.session model.trip_id )
+
+        NoOp ->
+            ( model, Cmd.none )
 
 
 
@@ -329,8 +419,8 @@ view { trip, session, problems, screen } =
                                                         ListAll ->
                                                             viewTrip screen trip
 
-                                                        EditEvent event_id event_form ->
-                                                            viewEventForm event_form trip_
+                                                        EditEvent event_id event_form _ ->
+                                                            viewEventForm screen event_form trip_
 
                                                         ListByType event_type ->
                                                             viewTrip screen trip
@@ -377,21 +467,11 @@ view { trip, session, problems, screen } =
 
 
 -- }}}
--- {{{ viewEvent
-
-
-viewEvent : EventForm -> TripWithEvents -> Html Msg
-viewEvent event_form trip =
-    viewEventForm event_form trip
-
-
-
--- }}}
 -- {{{ viewEventForm
 
 
-viewEventForm : EventForm -> TripWithEvents -> Html Msg
-viewEventForm event_form trip =
+viewEventForm : Screen -> EventForm -> TripWithEvents -> Html Msg
+viewEventForm screen event_form trip =
     let
         section =
             getSection (Uuid event_form.section_id) trip.sections
@@ -430,33 +510,66 @@ viewEventForm event_form trip =
 
                 Nothing ->
                     text ""
+
+        is_confirmed =
+            case screen of
+                EditEvent _ _ UnconfirmedDelete ->
+                    False
+
+                EditEvent _ _ ConfirmedDelete ->
+                    True
+
+                _ ->
+                    False
     in
-    Html.form [ onSubmit (SubmittedEventForm (Uuid event_form.uuid) event_form) ]
-        [ div [ class "field" ]
-            [ breadcrumb
-                [ ( "Home", Href (Route.href Route.Home) )
-                , ( trip.name, Href (Route.href <| Route.Planner <| Uuid trip.uuid) )
-                , ( section_title, OnClick (onClick <| Goto <| ListSection <| Uuid <| event_form.section_id) )
-                , ( Maybe.withDefault "..." event_form.title, Href (Route.href <| Route.Planner <| Uuid trip.uuid) )
-                ]
-            , label [ class "label" ] [ text "title" ]
-            , div [ class "control has-icons-left has-icons-right" ]
-                [ input
-                    [ class "input"
-                    , placeholder "Title"
-                    , onInput (\o -> UpdateEventForm { event_form | title = Just o })
-                    , value <| Maybe.withDefault "" event_form.title
+    div [ class "edit-event" ]
+        [ Html.form []
+            [ div [ class "field" ]
+                [ breadcrumb
+                    [ ( "Home", Href (Route.href Route.Home) )
+                    , ( trip.name, Href (Route.href <| Route.Planner <| Uuid trip.uuid) )
+                    , ( section_title, OnClick (onClick <| Goto <| ListSection <| Uuid <| event_form.section_id) )
+                    , ( Maybe.withDefault "..." event_form.title, Href (Route.href <| Route.Planner <| Uuid trip.uuid) )
                     ]
-                    []
+                , label [ class "label" ] [ text "title" ]
+                , div [ class "control has-icons-left has-icons-right" ]
+                    [ input
+                        [ class "input"
+                        , placeholder "Title"
+                        , onInput (\o -> UpdateEventForm { event_form | title = Just o })
+                        , value <| Maybe.withDefault "" event_form.title
+                        ]
+                        []
+                    ]
                 ]
+            , renderPriceField
             ]
-        , renderPriceField
         , div [ class "field is-grouped" ]
             [ div [ class "control" ]
-                [ button [ class "button is-link" ] [ text "Submit" ]
+                [ button [ class "button is-link", href "", onClick (SubmittedEventForm (Uuid event_form.uuid) event_form) ] [ text "Done" ]
                 ]
-            , div [ class "control" ]
-                [ button [ class "button is-text" ] [ text "Cancel" ]
+            , div [ class "flipper" ]
+                [ input [ type_ "checkbox", checked is_confirmed ] []
+                , div [ class "cntr" ]
+                    [ div [ class "front" ]
+                        [ button
+                            [ class <| "button is-text has-text-danger"
+                            , href ""
+                            , onClick <| DeleteEvent
+                            , onBlur <| Goto <| EditEvent (Uuid event_form.uuid) event_form UnconfirmedDelete
+                            ]
+                            [ text "Delete Event" ]
+                        ]
+                    , div [ class "back" ]
+                        [ button
+                            [ class <| "button is-danger"
+                            , href ""
+                            , onClick <| ConfirmedDeleteEvent <| Uuid event_form.uuid
+                            , onBlur <| Goto <| EditEvent (Uuid event_form.uuid) event_form UnconfirmedDelete
+                            ]
+                            [ text "Confirm Delete!" ]
+                        ]
+                    ]
                 ]
             ]
         ]
@@ -628,7 +741,7 @@ viewSections sections =
                     [ div [ class "title" ]
                         [ text title ]
                     , div [ class "events-icons" ]
-                        (List.repeat 7 (a [ class "event", onClick <| Goto <| ListSection <| Uuid uuid ] []))
+                        (List.repeat 7 (a [ href "", class "event", onClick <| Goto <| ListSection <| Uuid uuid ] []))
                     ]
                 , div [ class "more" ]
                     [ a
@@ -1031,6 +1144,21 @@ saveEvent event session trip_id section_id =
                 |> Graphql.Http.send
                     (RemoteData.fromResult
                         >> GotCreateEventResponse
+                    )
+
+        Guest _ ->
+            Cmd.none
+
+
+deleteEvent : Session -> TripId -> EventId -> Cmd Msg
+deleteEvent session trip_id event_id =
+    case session of
+        LoggedIn _ viewer ->
+            Mutations.deleteEventRequest trip_id event_id
+                |> Graphql.Http.withHeader "authorization" ("Bearer " ++ Viewer.tokenStr viewer)
+                |> Graphql.Http.send
+                    (RemoteData.fromResult
+                        >> GotDeleteEventResponse
                     )
 
         Guest _ ->

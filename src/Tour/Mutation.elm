@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Mutation exposing (SaveEventRequiredArguments, SaveSectionRequiredArguments, SaveTripRequiredArguments, saveEvent, saveSection, saveTrip)
+module Tour.Mutation exposing (DeleteEventRequiredArguments, SaveEventRequiredArguments, SaveSectionRequiredArguments, SaveTripRequiredArguments, deleteEvent, saveEvent, saveSection, saveTrip)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -17,6 +17,15 @@ import Tour.Object
 import Tour.Scalar
 import Tour.ScalarCodecs
 import Tour.Union
+
+
+type alias DeleteEventRequiredArguments =
+    { input : Tour.InputObject.DeleteEventInput }
+
+
+deleteEvent : DeleteEventRequiredArguments -> SelectionSet decodesTo Tour.Object.DeleteEventPayload -> SelectionSet (Maybe decodesTo) RootMutation
+deleteEvent requiredArgs object_ =
+    Object.selectionForCompositeField "deleteEvent" [ Argument.required "input" requiredArgs.input Tour.InputObject.encodeDeleteEventInput ] object_ (identity >> Decode.nullable)
 
 
 type alias SaveEventRequiredArguments =
