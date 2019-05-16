@@ -61,13 +61,21 @@ type Deletion
     | ConfirmedDelete
 
 
+type EventFormTabs
+    = DetailsTab
+    | PhotosTab
+    | FilesTab
+    | PlacesTab
+    | InfoTab
+
+
 type Screen
     = ListAll
     | ListSections
     | ListSection SectionId
     | Search String
     | ListByType EventType
-    | EditEvent EventId EventForm Deletion
+    | EditEvent EventId EventForm Deletion EventFormTabs
     | NewSection String
 
 
@@ -155,7 +163,7 @@ update msg model =
             let
                 section_id =
                     case model.screen of
-                        EditEvent _ event_form _ ->
+                        EditEvent _ event_form _ _ ->
                             Just <| .section_id <| event_form
 
                         _ ->
@@ -198,7 +206,7 @@ update msg model =
 
                 section_id =
                     case screen of
-                        EditEvent _ event_form _ ->
+                        EditEvent _ event_form _ _ ->
                             Just <| .section_id <| event_form
 
                         _ ->
@@ -240,7 +248,7 @@ update msg model =
                                     in
                                     { model
                                         | screen =
-                                            EditEvent (Uuid event_uuid) event_record UnconfirmedDelete
+                                            EditEvent (Uuid event_uuid) event_record UnconfirmedDelete DetailsTab
                                         , trip = response
                                     }
 
@@ -284,8 +292,8 @@ update msg model =
 
                 new_screen =
                     case screen of
-                        EditEvent uuid event_form _ ->
-                            EditEvent uuid event_form ConfirmedDelete
+                        EditEvent uuid event_form _ tab ->
+                            EditEvent uuid event_form ConfirmedDelete tab
 
                         same ->
                             same
@@ -296,7 +304,7 @@ update msg model =
             ( model, deleteEvent model.session model.trip_id event_id )
 
         UpdateEventForm event_form ->
-            ( { model | screen = EditEvent (Uuid event_form.uuid) event_form UnconfirmedDelete }, Cmd.none )
+            ( { model | screen = EditEvent (Uuid event_form.uuid) event_form UnconfirmedDelete DetailsTab }, Cmd.none )
 
         SubmitSection title ->
             let
@@ -335,7 +343,7 @@ view { trip, session, problems, screen } =
                                                         ListAll ->
                                                             viewTrip screen trip
 
-                                                        EditEvent event_id event_form _ ->
+                                                        EditEvent event_id event_form _ _ ->
                                                             viewEventForm screen event_form trip_
 
                                                         ListByType event_type ->
@@ -400,6 +408,20 @@ viewEventForm screen form trip =
                 Nothing ->
                     "Section"
 
+        -- {{{ notesField
+        notesField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Notes" ]
+                , textarea
+                    [ class "input textarea"
+                    , rows 6
+                    , onInput (\o -> UpdateEventForm { form | notes = Just o })
+                    , value (Maybe.withDefault "" form.notes)
+                    ]
+                    []
+                ]
+
+        -- }}}
         -- {{{ priceField
         priceField =
             div [ class "field" ]
@@ -622,20 +644,32 @@ viewEventForm screen form trip =
 
         is_confirmed =
             case screen of
-                EditEvent _ _ UnconfirmedDelete ->
+                EditEvent _ _ UnconfirmedDelete _ ->
                     False
 
-                EditEvent _ _ ConfirmedDelete ->
+                EditEvent _ _ ConfirmedDelete _ ->
                     True
 
                 _ ->
                     False
 
+        toggle_confirm =
+            case screen of
+                EditEvent uuid form_ UnconfirmedDelete tab ->
+                    EditEvent uuid form_ ConfirmedDelete tab
+
+                EditEvent uuid form_ ConfirmedDelete tab ->
+                    EditEvent uuid form_ UnconfirmedDelete tab
+
+                same ->
+                    same
+
         renderDetailsForm =
             case form.event_type of
                 "Event::Flight" ->
                     div []
-                        [ airlineField
+                        [ notesField
+                        , airlineField
                         , flight_numberField
                         , terminalField
                         , gateField
@@ -643,21 +677,24 @@ viewEventForm screen form trip =
 
                 "Event::Lodging" ->
                     div []
-                        [ booked_throughField
+                        [ notesField
+                        , booked_throughField
                         , confirmationField
                         , providerField
                         ]
 
                 "Event::Activity" ->
                     div []
-                        [ booked_throughField
+                        [ notesField
+                        , booked_throughField
                         , confirmationField
                         , providerField
                         ]
 
                 "Event::Transportation" ->
                     div []
-                        [ booked_throughField
+                        [ notesField
+                        , booked_throughField
                         , confirmationField
                         , providerField
                         , phone_numberField
@@ -665,7 +702,8 @@ viewEventForm screen form trip =
 
                 "Event::Cruise" ->
                     div []
-                        [ booked_throughField
+                        [ notesField
+                        , booked_throughField
                         , confirmationField
                         , providerField
                         , cabin_typeField
@@ -674,20 +712,56 @@ viewEventForm screen form trip =
 
                 "Event::Dining" ->
                     div []
-                        [ booked_throughField
+                        [ notesField
+                        , booked_throughField
                         , confirmationField
                         , providerField
                         ]
 
                 "Event::Information" ->
                     div []
-                        [ booked_throughField
+                        [ notesField
+                        , booked_throughField
                         , confirmationField
                         , providerField
                         ]
 
                 _ ->
-                    div [] [ renderPriceField ]
+                    text ""
+
+        renderPhotosForm =
+            div [] [ text "Photos form" ]
+
+        renderFilesForm =
+            div [] [ text "Files form" ]
+
+        renderPlacesForm =
+            div [] [ text "Places form" ]
+
+        renderInfoForm =
+            div [] [ text "Info form" ]
+
+        render_forms =
+            case screen of
+                EditEvent _ _ _ tab ->
+                    case tab of
+                        DetailsTab ->
+                            renderDetailsForm
+
+                        PhotosTab ->
+                            renderPhotosForm
+
+                        FilesTab ->
+                            renderFilesForm
+
+                        PlacesTab ->
+                            renderPlacesForm
+
+                        InfoTab ->
+                            renderInfoForm
+
+                _ ->
+                    text ""
     in
     div [ class "edit-event" ]
         [ Html.form []
@@ -708,18 +782,9 @@ viewEventForm screen form trip =
                         ]
                         []
                     ]
-                , label [ class "label" ] [ text "Notes" ]
-                , div [ class "control" ]
-                    [ textarea
-                        [ class "input textarea"
-                        , rows 6
-                        , onInput (\o -> UpdateEventForm { form | notes = Just o })
-                        , value <| Maybe.withDefault "" form.notes
-                        ]
-                        []
-                    ]
                 ]
-            , renderDetailsForm
+            , form_tabs screen
+            , render_forms
             ]
         , div [ class "field is-grouped" ]
             [ div [ class "control" ]
@@ -739,7 +804,7 @@ viewEventForm screen form trip =
 
                       else
                         onClick <| DeleteEvent
-                    , onBlur <| Goto <| EditEvent (Uuid form.uuid) form UnconfirmedDelete
+                    , onBlur <| Goto <| toggle_confirm
                     ]
                     [ text <|
                         if is_confirmed then
@@ -1207,54 +1272,69 @@ sectionForm title =
 
 
 -- }}}
--- {{{ Tabs
+-- {{{ form_tabs
 
 
-tab_title : SectionId -> TripWithEvents -> String
-tab_title section_id trip =
+form_tabs : Screen -> Html Msg
+form_tabs screen =
     let
-        section =
-            List.head <| List.filter (\item -> item.uuid == Uuid.toString section_id) trip.sections
-    in
-    Maybe.withDefault "Section" <| Maybe.map (\o -> o.title) section
-
-
-tabs : Screen -> TripWithEvents -> Html Msg
-tabs screen trip =
-    let
-        section_tab =
+        goto_tab tab =
             case screen of
-                ListSection section_id ->
-                    [ li [ class "is-active" ] [ a [] [ text (tab_title section_id trip) ] ] ]
+                EditEvent uuid form deletion _ ->
+                    case tab of
+                        "details" ->
+                            EditEvent uuid form deletion DetailsTab
 
-                _ ->
-                    []
+                        "photos" ->
+                            EditEvent uuid form deletion PhotosTab
+
+                        "files" ->
+                            EditEvent uuid form deletion FilesTab
+
+                        "places" ->
+                            EditEvent uuid form deletion PlacesTab
+
+                        "info" ->
+                            EditEvent uuid form deletion InfoTab
+
+                        _ ->
+                            screen
+
+                same ->
+                    same
 
         is_active tab =
             case screen of
-                ListSection _ ->
-                    if tab == "section" then
+                EditEvent _ _ _ DetailsTab ->
+                    if tab == "details" then
                         "is-active"
 
                     else
                         ""
 
-                ListSections ->
-                    if tab == "sections" then
+                EditEvent _ _ _ PhotosTab ->
+                    if tab == "photos" then
                         "is-active"
 
                     else
                         ""
 
-                ListAll ->
-                    if tab == "all" then
+                EditEvent _ _ _ FilesTab ->
+                    if tab == "files" then
                         "is-active"
 
                     else
                         ""
 
-                Search _ ->
-                    if tab == "all" then
+                EditEvent _ _ _ PlacesTab ->
+                    if tab == "places" then
+                        "is-active"
+
+                    else
+                        ""
+
+                EditEvent _ _ _ InfoTab ->
+                    if tab == "info" then
                         "is-active"
 
                     else
@@ -1262,31 +1342,21 @@ tabs screen trip =
 
                 _ ->
                     ""
+
+        render_tab tab_name =
+            li [ class (is_active tab_name) ]
+                [ a
+                    [ href ""
+                    , onClick <| Goto <| goto_tab tab_name
+                    ]
+                    [ text tab_name ]
+                ]
     in
     div [ class "tabs" ]
         [ ul []
-            (List.concat
-                [ section_tab
-                , [ li [ class (is_active "sections") ]
-                        [ a
-                            [ href ""
-                            , onClick <| Goto ListSections
-                            ]
-                            [ text "Sections" ]
-                        ]
-                  , li [ class (is_active "all") ]
-                        [ a
-                            [ href ""
-                            , onClick <| Goto ListAll
-                            ]
-                            [ text "All Events" ]
-                        ]
-                  , li [ class (is_active "search") ]
-                        [ a [ href "" ]
-                            [ text "Search" ]
-                        ]
-                  ]
-                ]
+            (List.map
+                render_tab
+                [ "details", "photos", "files", "places", "info" ]
             )
         ]
 
