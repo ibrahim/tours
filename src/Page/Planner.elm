@@ -156,7 +156,7 @@ update msg model =
                 section_id =
                     case model.screen of
                         EditEvent _ event_form _ ->
-                            Just event_form.section_id
+                            Just <| .section_id <| event_form
 
                         _ ->
                             Nothing
@@ -199,9 +199,9 @@ update msg model =
                 section_id =
                     case screen of
                         EditEvent _ event_form _ ->
-                            Just event_form.section_id
+                            Just <| .section_id <| event_form
 
-                        same ->
+                        _ ->
                             Nothing
 
                 new_screen =
@@ -230,101 +230,17 @@ update msg model =
                     case data of
                         { email, event, trips } ->
                             case event of
-                                Just (Dining uuid section_id type_ title) ->
-                                    { model
-                                        | screen =
-                                            EditEvent (Uuid uuid)
-                                                { uuid = uuid
-                                                , section_id = section_id
-                                                , title = title
-                                                , price = Nothing
-                                                , event_type = type_
-                                                }
-                                                UnconfirmedDelete
-                                        , trip = response
-                                    }
+                                Just event_form ->
+                                    let
+                                        event_record =
+                                            event_to_record event_form
 
-                                Just (Information uuid section_id type_ title) ->
+                                        event_uuid =
+                                            .uuid event_record
+                                    in
                                     { model
                                         | screen =
-                                            EditEvent (Uuid uuid)
-                                                { uuid = uuid
-                                                , section_id = section_id
-                                                , title = title
-                                                , price = Nothing
-                                                , event_type = type_
-                                                }
-                                                UnconfirmedDelete
-                                        , trip = response
-                                    }
-
-                                Just (Activity uuid section_id type_ title price) ->
-                                    { model
-                                        | screen =
-                                            EditEvent (Uuid uuid)
-                                                { uuid = uuid
-                                                , section_id = section_id
-                                                , title = title
-                                                , price = price
-                                                , event_type = type_
-                                                }
-                                                UnconfirmedDelete
-                                        , trip = response
-                                    }
-
-                                Just (Lodging uuid section_id type_ title price) ->
-                                    { model
-                                        | screen =
-                                            EditEvent (Uuid uuid)
-                                                { uuid = uuid
-                                                , section_id = section_id
-                                                , title = title
-                                                , price = price
-                                                , event_type = type_
-                                                }
-                                                UnconfirmedDelete
-                                        , trip = response
-                                    }
-
-                                Just (Flight uuid section_id type_ title price) ->
-                                    { model
-                                        | screen =
-                                            EditEvent (Uuid uuid)
-                                                { uuid = uuid
-                                                , section_id = section_id
-                                                , title = title
-                                                , price = price
-                                                , event_type = type_
-                                                }
-                                                UnconfirmedDelete
-                                        , trip = response
-                                    }
-
-                                Just (Transportation uuid section_id type_ title price) ->
-                                    { model
-                                        | screen =
-                                            EditEvent (Uuid uuid)
-                                                { uuid = uuid
-                                                , section_id = section_id
-                                                , title = title
-                                                , price = price
-                                                , event_type = type_
-                                                }
-                                                UnconfirmedDelete
-                                        , trip = response
-                                    }
-
-                                Just (Cruise uuid section_id type_ title price) ->
-                                    { model
-                                        | screen =
-                                            EditEvent (Uuid uuid)
-                                                { uuid = uuid
-                                                , section_id = section_id
-                                                , title = title
-                                                , price = price
-                                                , event_type = type_
-                                                }
-                                                UnconfirmedDelete
+                                            EditEvent (Uuid event_uuid) event_record UnconfirmedDelete
                                         , trip = response
                                     }
 
@@ -340,7 +256,7 @@ update msg model =
             Api.processQueryResponse response model resolve reject
 
         CreateNewEvent (EventType event_type) section_id ->
-            ( model, saveEvent (CreateEvent { title = "", event_type = event_type }) model.session model.trip_id section_id )
+            ( model, saveEvent (CreateEvent { event_type = event_type }) model.session model.trip_id section_id )
 
         ReportProblem problem ->
             ( { model | problems = [ problem ] }, Cmd.none )
@@ -435,7 +351,7 @@ view { trip, session, problems, screen } =
                                                             in
                                                             case section of
                                                                 Just section_ ->
-                                                                    viewSectionEvents section_ events trip_
+                                                                    viewListSection section_ events trip_
 
                                                                 Nothing ->
                                                                     text "Section Not Found"
@@ -471,10 +387,10 @@ view { trip, session, problems, screen } =
 
 
 viewEventForm : Screen -> EventForm -> TripWithEvents -> Html Msg
-viewEventForm screen event_form trip =
+viewEventForm screen form trip =
     let
         section =
-            getSection (Uuid event_form.section_id) trip.sections
+            getSection (Uuid form.section_id) trip.sections
 
         section_title =
             case section of
@@ -484,32 +400,225 @@ viewEventForm screen event_form trip =
                 Nothing ->
                     "Section"
 
+        -- {{{ priceField
         priceField =
             div [ class "field" ]
                 [ label [ class "label" ] [ text "Price" ]
-                , div [ class "control has-icons-left has-icons-right" ]
-                    [ input
-                        [ class "input"
-                        , type_ "text"
-                        , placeholder "Price"
-                        , onInput (\o -> UpdateEventForm { event_form | price = String.toInt o })
-                        , value (Maybe.withDefault "" (Maybe.map String.fromInt event_form.price))
-                        ]
-                        []
-                    , span [ class "icon is-small is-left" ]
-                        [ i [ class "fas fa-user" ] [] ]
-                    , span [ class "icon is-small is-right" ]
-                        [ i [ class "fas fa-check" ] [] ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , placeholder "Price"
+                    , onInput (\o -> UpdateEventForm { form | price = String.toInt o })
+                    , value (Maybe.withDefault "" (Maybe.map String.fromInt form.price))
                     ]
+                    []
                 ]
 
-        renderPriceField =
-            case event_form.price of
-                Just price ->
-                    priceField
+        -- }}}
+        -- {{{ currencyField
+        currencyField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Currency" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , placeholder "Currency"
+                    , onInput (\o -> UpdateEventForm { form | currency = Just o })
+                    , value (Maybe.withDefault "" form.currency)
+                    ]
+                    []
+                ]
 
-                Nothing ->
+        -- }}}
+        -- {{{ booked_throughField
+        booked_throughField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Booked Through" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | booked_through = Just o })
+                    , value (Maybe.withDefault "" form.booked_through)
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ confirmationField
+        confirmationField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Confirmation" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | confirmation = Just o })
+                    , value (Maybe.withDefault "" form.confirmation)
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ airlineField
+        airlineField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Airline" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | airline = Just o })
+                    , value (Maybe.withDefault "" form.airline)
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ flight_numberField
+        flight_numberField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Flight Number" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | flight_number = Just o })
+                    , value (Maybe.withDefault "" form.flight_number)
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ terminalField
+        terminalField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Terminal" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | terminal = Just o })
+                    , value (Maybe.withDefault "" form.terminal)
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ gateField
+        gateField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Gate" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | gate = Just o })
+                    , value (Maybe.withDefault "" form.gate)
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ phone_numberField
+        phone_numberField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Phone Number" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | phone_number = Just o })
+                    , value (Maybe.withDefault "" form.phone_number)
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ starts_atField
+        starts_atField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Starts At" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | starts_at = String.toFloat o })
+                    , value (Maybe.withDefault "" (Maybe.map String.fromFloat form.starts_at))
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ durationField
+        durationField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Duration" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | duration = String.toInt o })
+                    , value (Maybe.withDefault "" (Maybe.map String.fromInt form.duration))
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ cabin_typeField
+        cabin_typeField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Cabin Type" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | cabin_type = Just o })
+                    , value (Maybe.withDefault "" form.cabin_type)
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ cabin_numberField
+        cabin_numberField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Cabin Number" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | cabin_number = Just o })
+                    , value (Maybe.withDefault "" form.cabin_number)
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ providerField
+        providerField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Provider" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | provider = Just o })
+                    , value (Maybe.withDefault "" form.provider)
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ info_typeField
+        info_typeField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Info Type" ]
+                , input
+                    [ class "input"
+                    , type_ "text"
+                    , onInput (\o -> UpdateEventForm { form | info_type = Just o })
+                    , value (Maybe.withDefault "" form.info_type)
+                    ]
+                    []
+                ]
+
+        -- }}}
+        renderPriceField =
+            case form.event_type of
+                "Event::Information" ->
                     text ""
+
+                _ ->
+                    priceField
 
         is_confirmed =
             case screen of
@@ -521,6 +630,64 @@ viewEventForm screen event_form trip =
 
                 _ ->
                     False
+
+        renderDetailsForm =
+            case form.event_type of
+                "Event::Flight" ->
+                    div []
+                        [ airlineField
+                        , flight_numberField
+                        , terminalField
+                        , gateField
+                        ]
+
+                "Event::Lodging" ->
+                    div []
+                        [ booked_throughField
+                        , confirmationField
+                        , providerField
+                        ]
+
+                "Event::Activity" ->
+                    div []
+                        [ booked_throughField
+                        , confirmationField
+                        , providerField
+                        ]
+
+                "Event::Transportation" ->
+                    div []
+                        [ booked_throughField
+                        , confirmationField
+                        , providerField
+                        , phone_numberField
+                        ]
+
+                "Event::Cruise" ->
+                    div []
+                        [ booked_throughField
+                        , confirmationField
+                        , providerField
+                        , cabin_typeField
+                        , cabin_numberField
+                        ]
+
+                "Event::Dining" ->
+                    div []
+                        [ booked_throughField
+                        , confirmationField
+                        , providerField
+                        ]
+
+                "Event::Information" ->
+                    div []
+                        [ booked_throughField
+                        , confirmationField
+                        , providerField
+                        ]
+
+                _ ->
+                    div [] [ renderPriceField ]
     in
     div [ class "edit-event" ]
         [ Html.form []
@@ -528,25 +695,35 @@ viewEventForm screen event_form trip =
                 [ breadcrumb
                     [ ( "Home", Href (Route.href Route.Home) )
                     , ( trip.name, Href (Route.href <| Route.Planner <| Uuid trip.uuid) )
-                    , ( section_title, OnClick (onClick <| Goto <| ListSection <| Uuid <| event_form.section_id) )
-                    , ( Maybe.withDefault "..." event_form.title, Href (Route.href <| Route.Planner <| Uuid trip.uuid) )
+                    , ( section_title, OnClick (onClick <| Goto <| ListSection <| Uuid <| form.section_id) )
+                    , ( Maybe.withDefault "..." form.title, Href (Route.href <| Route.Planner <| Uuid trip.uuid) )
                     ]
-                , label [ class "label" ] [ text "title" ]
+                , label [ class "label" ] [ text "Title" ]
                 , div [ class "control has-icons-left has-icons-right" ]
                     [ input
                         [ class "input"
                         , placeholder "Title"
-                        , onInput (\o -> UpdateEventForm { event_form | title = Just o })
-                        , value <| Maybe.withDefault "" event_form.title
+                        , onInput (\o -> UpdateEventForm { form | title = Just o })
+                        , value <| Maybe.withDefault "" form.title
+                        ]
+                        []
+                    ]
+                , label [ class "label" ] [ text "Notes" ]
+                , div [ class "control" ]
+                    [ textarea
+                        [ class "input textarea"
+                        , rows 6
+                        , onInput (\o -> UpdateEventForm { form | notes = Just o })
+                        , value <| Maybe.withDefault "" form.notes
                         ]
                         []
                     ]
                 ]
-            , renderPriceField
+            , renderDetailsForm
             ]
         , div [ class "field is-grouped" ]
             [ div [ class "control" ]
-                [ button [ class "button is-link", href "", onClick (SubmittedEventForm (Uuid event_form.uuid) event_form) ] [ text "Done" ]
+                [ button [ class "button is-link", href "", onClick (SubmittedEventForm (Uuid form.uuid) form) ] [ text "Done" ]
                 ]
             , div []
                 [ button
@@ -558,11 +735,11 @@ viewEventForm screen event_form trip =
                             "button has-text-danger is-text flip-horizontal-bottom"
                     , href ""
                     , if is_confirmed then
-                        onClick <| ConfirmedDeleteEvent <| Uuid event_form.uuid
+                        onClick <| ConfirmedDeleteEvent <| Uuid form.uuid
 
                       else
                         onClick <| DeleteEvent
-                    , onBlur <| Goto <| EditEvent (Uuid event_form.uuid) event_form UnconfirmedDelete
+                    , onBlur <| Goto <| EditEvent (Uuid form.uuid) form UnconfirmedDelete
                     ]
                     [ text <|
                         if is_confirmed then
@@ -662,14 +839,16 @@ viewItinirary screen trip =
         , div []
             (case screen of
                 ListSections ->
-                    viewSections trip.sections
+                    viewSections trip.sections events
 
                 ListAll ->
                     List.map viewEventItem events
 
                 ListSection section_id ->
                     List.map viewEventItem <|
-                        List.filter (\event -> event.section_id == Uuid.toString section_id) (eventsToRecords trip.events)
+                        List.filter
+                            (\event -> event.section_id == Uuid.toString section_id)
+                            (eventsToRecords trip.events)
 
                 _ ->
                     [ text "Other Tabs" ]
@@ -683,7 +862,7 @@ viewItinirary screen trip =
 
 
 --}}}
--- {{{ viewSectionEvents
+-- {{{ viewListSection
 
 
 viewEventFull event =
@@ -709,7 +888,7 @@ viewEventFull event =
         ]
 
 
-viewSectionEvents section events trip =
+viewListSection section events trip =
     let
         sectionHeader =
             div [ class "section-hdr level" ]
@@ -736,8 +915,11 @@ viewSectionEvents section events trip =
 -- {{{ viewSections
 
 
-viewSections sections =
+viewSections sections events =
     let
+        lower_event_name o =
+            String.toLower <| event_name o.event_type
+
         viewSection { uuid, title } =
             div
                 [ class "section-summary"
@@ -746,7 +928,18 @@ viewSections sections =
                     [ div [ class "title" ]
                         [ text title ]
                     , div [ class "events-icons" ]
-                        (List.repeat 7 (a [ href "", class "event", onClick <| Goto <| ListSection <| Uuid uuid ] []))
+                        (List.map
+                            (\o ->
+                                a
+                                    [ href ""
+                                    , class <| "event " ++ lower_event_name o
+                                    , onClick <| Goto <| ListSection <| Uuid uuid
+                                    ]
+                                    [ span [ class <| "fas fa-" ++ lower_event_name o ] []
+                                    ]
+                            )
+                            events
+                        )
                     ]
                 , div [ class "more" ]
                     [ a
@@ -783,32 +976,179 @@ viewTrip screen remote_response =
 -- eventsToRecords : List Event -> List EventForm
 
 
+event_to_record event =
+    case event of
+        Dining uuid section_id event_type title price currency notes starts_at duration booked_through confirmation provider ->
+            { uuid = uuid
+            , section_id = section_id
+            , event_type = event_type
+            , title = title
+            , price = price
+            , currency = currency
+            , notes = notes
+            , starts_at = starts_at
+            , duration = duration
+            , booked_through = booked_through
+            , confirmation = confirmation
+            , provider = provider
+            , airline = Nothing
+            , terminal = Nothing
+            , flight_number = Nothing
+            , gate = Nothing
+            , info_type = Nothing
+            , cabin_type = Nothing
+            , cabin_number = Nothing
+            , carrier = Nothing
+            , phone_number = Nothing
+            }
+
+        Information uuid section_id event_type title notes info_type ->
+            { uuid = uuid
+            , section_id = section_id
+            , event_type = event_type
+            , title = title
+            , notes = notes
+            , info_type = info_type
+            , price = Nothing
+            , currency = Nothing
+            , starts_at = Nothing
+            , duration = Nothing
+            , booked_through = Nothing
+            , confirmation = Nothing
+            , provider = Nothing
+            , airline = Nothing
+            , terminal = Nothing
+            , flight_number = Nothing
+            , gate = Nothing
+            , cabin_type = Nothing
+            , cabin_number = Nothing
+            , carrier = Nothing
+            , phone_number = Nothing
+            }
+
+        Activity uuid section_id event_type title price currency notes starts_at duration booked_through confirmation provider ->
+            { uuid = uuid
+            , section_id = section_id
+            , event_type = event_type
+            , title = title
+            , price = price
+            , currency = currency
+            , notes = notes
+            , starts_at = starts_at
+            , duration = duration
+            , booked_through = booked_through
+            , confirmation = confirmation
+            , provider = provider
+            , airline = Nothing
+            , terminal = Nothing
+            , flight_number = Nothing
+            , gate = Nothing
+            , cabin_type = Nothing
+            , cabin_number = Nothing
+            , carrier = Nothing
+            , phone_number = Nothing
+            , info_type = Nothing
+            }
+
+        Lodging uuid section_id event_type title price currency notes starts_at duration booked_through confirmation provider ->
+            { uuid = uuid
+            , section_id = section_id
+            , event_type = event_type
+            , title = title
+            , price = price
+            , currency = currency
+            , notes = notes
+            , starts_at = starts_at
+            , duration = duration
+            , booked_through = booked_through
+            , confirmation = confirmation
+            , provider = provider
+            , airline = Nothing
+            , terminal = Nothing
+            , flight_number = Nothing
+            , gate = Nothing
+            , cabin_type = Nothing
+            , cabin_number = Nothing
+            , carrier = Nothing
+            , phone_number = Nothing
+            , info_type = Nothing
+            }
+
+        Flight uuid section_id event_type title price currency notes starts_at duration booked_through confirmation airline flight_number terminal gate ->
+            { uuid = uuid
+            , section_id = section_id
+            , event_type = event_type
+            , title = title
+            , price = price
+            , currency = currency
+            , notes = notes
+            , starts_at = starts_at
+            , duration = duration
+            , booked_through = booked_through
+            , confirmation = confirmation
+            , airline = airline
+            , flight_number = flight_number
+            , terminal = terminal
+            , gate = gate
+            , carrier = Nothing
+            , provider = Nothing
+            , cabin_type = Nothing
+            , cabin_number = Nothing
+            , phone_number = Nothing
+            , info_type = Nothing
+            }
+
+        Transportation uuid section_id event_type title price currency notes starts_at duration booked_through confirmation carrier phone_number ->
+            { uuid = uuid
+            , section_id = section_id
+            , event_type = event_type
+            , title = title
+            , price = price
+            , currency = currency
+            , notes = notes
+            , starts_at = starts_at
+            , duration = duration
+            , booked_through = booked_through
+            , confirmation = confirmation
+            , carrier = carrier
+            , phone_number = phone_number
+            , provider = Nothing
+            , airline = Nothing
+            , terminal = Nothing
+            , flight_number = Nothing
+            , gate = Nothing
+            , cabin_type = Nothing
+            , cabin_number = Nothing
+            , info_type = Nothing
+            }
+
+        Cruise uuid section_id event_type title price currency notes starts_at duration booked_through confirmation carrier cabin_type cabin_number ->
+            { uuid = uuid
+            , section_id = section_id
+            , event_type = event_type
+            , title = title
+            , price = price
+            , currency = currency
+            , notes = notes
+            , starts_at = starts_at
+            , duration = duration
+            , booked_through = booked_through
+            , confirmation = confirmation
+            , carrier = carrier
+            , cabin_type = cabin_type
+            , cabin_number = cabin_number
+            , airline = Nothing
+            , terminal = Nothing
+            , provider = Nothing
+            , flight_number = Nothing
+            , gate = Nothing
+            , info_type = Nothing
+            , phone_number = Nothing
+            }
+
+
 eventsToRecords events =
-    let
-        convert event =
-            case event of
-                Dining uuid section_id event_type title ->
-                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = Nothing }
-
-                Information uuid section_id event_type title ->
-                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = Nothing }
-
-                Activity uuid section_id event_type title price ->
-                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = price }
-
-                Lodging uuid section_id event_type title price ->
-                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = price }
-
-                Flight uuid section_id event_type title price ->
-                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = price }
-
-                Transportation uuid section_id event_type title price ->
-                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = price }
-
-                Cruise uuid section_id event_type title price ->
-                    { uuid = uuid, section_id = section_id, event_type = event_type, title = title, price = price }
-    in
-    List.map convert events
+    List.map event_to_record events
 
 
 

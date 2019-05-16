@@ -11,8 +11,22 @@ $blue-mustang: #2d748c
 $brass-gold: #cdab57
 $social-bubble: #0981fe
 $slate: #617d8c
+$gold: #cb9b42
+$cloud: #87a8d0
+$violet: #c3b4d2
+$pistache: #b1d1c5
+$peach: #f9c4aa
+$vague-pink: #e6a4b4
 
-// {{{ Section Summary
+$activity: $pistache
+$flight: $cloud
+$dining: $vague-pink
+$lodging: $gold
+$transportation: $violet
+$information: $cloud
+$cruise: $peach
+
+// {{{ ListSections
 .section-summary
   display: flex
   border: 1px solid #f0f0f0
@@ -29,6 +43,9 @@ $slate: #617d8c
     .events-icons
       display: flex
       .event
+        color: #fff
+        justify-content: center
+        align-items: center
         display: flex
         width: 30px
         height: 30px
@@ -36,6 +53,24 @@ $slate: #617d8c
         border: 2px solid #fff
         border-radius: 15px
         background-color: #ccc
+        span
+          display: flex
+          justify-content: center
+          align-items: center
+      .event.activity
+        background-color: $activity
+      .event.lodging
+        background-color: $lodging
+      .event.flight
+        background-color: $flight
+      .event.transportation
+        background-color: $transportation
+      .event.cruise
+        background-color: $cruise
+      .event.dining
+        background-color: $dining
+      .event.information
+        background-color: $information
   .more
     flex-basis: 30px
     align-items: center
@@ -65,7 +100,7 @@ $slate: #617d8c
       span.fa-activity
         font-size: 16px
 // }}}
-// {{{ Event Full
+// {{{ ListSection
 .event-full
   display: flex
   flex-flow: row
@@ -100,37 +135,37 @@ $slate: #617d8c
         font-size: 20px
     .sign.activity
       border: 2px solid #fff
-      background-color: $slate
+      background-color: $activity
       .icon
         color: #fff
         font-size: 16px
     .sign.flight
-      background-color: $brass-gold
+      background-color: $flight
       border: 2px solid #fff
       .icon
         color: #fff
     .sign.dining
-      background-color: $one-million-likes
+      background-color: $dining
       border: 2px solid #fff
       .icon
         color: #fff
     .sign.lodging
-      background-color: $polished-copper
+      background-color: $lodging
       border: 2px solid #fff
       .icon
         color: #fff
     .sign.transportation
-      background-color: $millineal-pink
+      background-color: $transportation
       border: 2px solid #fff
       .icon
         color: #fff
     .sign.cruise
-      background-color: $succulent
+      background-color: $cruise
       border: 2px solid #fff
       .icon
         color: #fff
     .sign.information
-      background-color: $social-bubble
+      background-color: $information
       border: 2px solid #fff
       .icon
         color: #fff

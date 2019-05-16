@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Object.Cruise exposing (currency, day, duration, notes, price, section_id, snippets, starts_at, title, type_, uuid)
+module Tour.Object.Cruise exposing (booked_through, cabin_number, cabin_type, carrier, confirmation, currency, day, duration, notes, price, section_id, snippets, starts_at, title, type_, uuid)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -22,6 +22,31 @@ import Tour.Union
 type_ : SelectionSet String Tour.Object.Cruise
 type_ =
     Object.selectionForField "String" "_type" [] Decode.string
+
+
+booked_through : SelectionSet (Maybe String) Tour.Object.Cruise
+booked_through =
+    Object.selectionForField "(Maybe String)" "booked_through" [] (Decode.string |> Decode.nullable)
+
+
+cabin_number : SelectionSet (Maybe String) Tour.Object.Cruise
+cabin_number =
+    Object.selectionForField "(Maybe String)" "cabin_number" [] (Decode.string |> Decode.nullable)
+
+
+cabin_type : SelectionSet (Maybe String) Tour.Object.Cruise
+cabin_type =
+    Object.selectionForField "(Maybe String)" "cabin_type" [] (Decode.string |> Decode.nullable)
+
+
+carrier : SelectionSet (Maybe String) Tour.Object.Cruise
+carrier =
+    Object.selectionForField "(Maybe String)" "carrier" [] (Decode.string |> Decode.nullable)
+
+
+confirmation : SelectionSet (Maybe String) Tour.Object.Cruise
+confirmation =
+    Object.selectionForField "(Maybe String)" "confirmation" [] (Decode.string |> Decode.nullable)
 
 
 currency : SelectionSet (Maybe String) Tour.Object.Cruise
@@ -59,9 +84,9 @@ snippets object_ =
     Object.selectionForCompositeField "snippets" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
 
-starts_at : SelectionSet (Maybe String) Tour.Object.Cruise
+starts_at : SelectionSet (Maybe Float) Tour.Object.Cruise
 starts_at =
-    Object.selectionForField "(Maybe String)" "starts_at" [] (Decode.string |> Decode.nullable)
+    Object.selectionForField "(Maybe Float)" "starts_at" [] (Decode.float |> Decode.nullable)
 
 
 title : SelectionSet (Maybe String) Tour.Object.Cruise

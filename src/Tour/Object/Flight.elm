@@ -84,9 +84,9 @@ snippets object_ =
     Object.selectionForCompositeField "snippets" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
 
-starts_at : SelectionSet (Maybe String) Tour.Object.Flight
+starts_at : SelectionSet (Maybe Float) Tour.Object.Flight
 starts_at =
-    Object.selectionForField "(Maybe String)" "starts_at" [] (Decode.string |> Decode.nullable)
+    Object.selectionForField "(Maybe Float)" "starts_at" [] (Decode.float |> Decode.nullable)
 
 
 terminal : SelectionSet (Maybe String) Tour.Object.Flight

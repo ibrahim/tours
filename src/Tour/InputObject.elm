@@ -59,9 +59,9 @@ buildSaveEventInput required fillOptionals =
     let
         optionals =
             fillOptionals
-                { clientMutationId = Absent, uuid = Absent, title = Absent, notes = Absent, price = Absent, currency = Absent, starts_at = Absent, duration = Absent, day = Absent }
+                { clientMutationId = Absent, uuid = Absent, title = Absent, notes = Absent, price = Absent, currency = Absent, starts_at = Absent, duration = Absent, day = Absent, booked_through = Absent, confirmation = Absent, provider = Absent, airline = Absent, flight_number = Absent, terminal = Absent, gate = Absent, cabin_type = Absent, cabin_number = Absent, phone_number = Absent, carrier = Absent, info_type = Absent }
     in
-    { clientMutationId = optionals.clientMutationId, trip_id = required.trip_id, type_ = required.type_, section_id = required.section_id, uuid = optionals.uuid, title = optionals.title, notes = optionals.notes, price = optionals.price, currency = optionals.currency, starts_at = optionals.starts_at, duration = optionals.duration, day = optionals.day }
+    { clientMutationId = optionals.clientMutationId, trip_id = required.trip_id, type_ = required.type_, section_id = required.section_id, uuid = optionals.uuid, title = optionals.title, notes = optionals.notes, price = optionals.price, currency = optionals.currency, starts_at = optionals.starts_at, duration = optionals.duration, day = optionals.day, booked_through = optionals.booked_through, confirmation = optionals.confirmation, provider = optionals.provider, airline = optionals.airline, flight_number = optionals.flight_number, terminal = optionals.terminal, gate = optionals.gate, cabin_type = optionals.cabin_type, cabin_number = optionals.cabin_number, phone_number = optionals.phone_number, carrier = optionals.carrier, info_type = optionals.info_type }
 
 
 type alias SaveEventInputRequiredFields =
@@ -78,9 +78,21 @@ type alias SaveEventInputOptionalFields =
     , notes : OptionalArgument String
     , price : OptionalArgument Int
     , currency : OptionalArgument String
-    , starts_at : OptionalArgument String
+    , starts_at : OptionalArgument Float
     , duration : OptionalArgument Int
     , day : OptionalArgument Int
+    , booked_through : OptionalArgument String
+    , confirmation : OptionalArgument String
+    , provider : OptionalArgument String
+    , airline : OptionalArgument String
+    , flight_number : OptionalArgument String
+    , terminal : OptionalArgument String
+    , gate : OptionalArgument String
+    , cabin_type : OptionalArgument String
+    , cabin_number : OptionalArgument String
+    , phone_number : OptionalArgument String
+    , carrier : OptionalArgument String
+    , info_type : OptionalArgument String
     }
 
 
@@ -96,9 +108,21 @@ type alias SaveEventInput =
     , notes : OptionalArgument String
     , price : OptionalArgument Int
     , currency : OptionalArgument String
-    , starts_at : OptionalArgument String
+    , starts_at : OptionalArgument Float
     , duration : OptionalArgument Int
     , day : OptionalArgument Int
+    , booked_through : OptionalArgument String
+    , confirmation : OptionalArgument String
+    , provider : OptionalArgument String
+    , airline : OptionalArgument String
+    , flight_number : OptionalArgument String
+    , terminal : OptionalArgument String
+    , gate : OptionalArgument String
+    , cabin_type : OptionalArgument String
+    , cabin_number : OptionalArgument String
+    , phone_number : OptionalArgument String
+    , carrier : OptionalArgument String
+    , info_type : OptionalArgument String
     }
 
 
@@ -107,7 +131,7 @@ type alias SaveEventInput =
 encodeSaveEventInput : SaveEventInput -> Value
 encodeSaveEventInput input =
     Encode.maybeObject
-        [ ( "clientMutationId", Encode.string |> Encode.optional input.clientMutationId ), ( "trip_id", Encode.string input.trip_id |> Just ), ( "_type", Encode.string input.type_ |> Just ), ( "section_id", Encode.string input.section_id |> Just ), ( "uuid", Encode.string |> Encode.optional input.uuid ), ( "title", Encode.string |> Encode.optional input.title ), ( "notes", Encode.string |> Encode.optional input.notes ), ( "price", Encode.int |> Encode.optional input.price ), ( "currency", Encode.string |> Encode.optional input.currency ), ( "starts_at", Encode.string |> Encode.optional input.starts_at ), ( "duration", Encode.int |> Encode.optional input.duration ), ( "day", Encode.int |> Encode.optional input.day ) ]
+        [ ( "clientMutationId", Encode.string |> Encode.optional input.clientMutationId ), ( "trip_id", Encode.string input.trip_id |> Just ), ( "_type", Encode.string input.type_ |> Just ), ( "section_id", Encode.string input.section_id |> Just ), ( "uuid", Encode.string |> Encode.optional input.uuid ), ( "title", Encode.string |> Encode.optional input.title ), ( "notes", Encode.string |> Encode.optional input.notes ), ( "price", Encode.int |> Encode.optional input.price ), ( "currency", Encode.string |> Encode.optional input.currency ), ( "starts_at", Encode.float |> Encode.optional input.starts_at ), ( "duration", Encode.int |> Encode.optional input.duration ), ( "day", Encode.int |> Encode.optional input.day ), ( "booked_through", Encode.string |> Encode.optional input.booked_through ), ( "confirmation", Encode.string |> Encode.optional input.confirmation ), ( "provider", Encode.string |> Encode.optional input.provider ), ( "airline", Encode.string |> Encode.optional input.airline ), ( "flight_number", Encode.string |> Encode.optional input.flight_number ), ( "terminal", Encode.string |> Encode.optional input.terminal ), ( "gate", Encode.string |> Encode.optional input.gate ), ( "cabin_type", Encode.string |> Encode.optional input.cabin_type ), ( "cabin_number", Encode.string |> Encode.optional input.cabin_number ), ( "phone_number", Encode.string |> Encode.optional input.phone_number ), ( "carrier", Encode.string |> Encode.optional input.carrier ), ( "info_type", Encode.string |> Encode.optional input.info_type ) ]
 
 
 buildSaveSectionInput : SaveSectionInputRequiredFields -> (SaveSectionInputOptionalFields -> SaveSectionInputOptionalFields) -> SaveSectionInput

@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Object.Activity exposing (currency, day, duration, notes, price, section_id, snippets, starts_at, title, type_, uuid)
+module Tour.Object.Activity exposing (booked_through, confirmation, currency, day, duration, notes, price, provider, section_id, snippets, starts_at, title, type_, uuid)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -22,6 +22,16 @@ import Tour.Union
 type_ : SelectionSet String Tour.Object.Activity
 type_ =
     Object.selectionForField "String" "_type" [] Decode.string
+
+
+booked_through : SelectionSet (Maybe String) Tour.Object.Activity
+booked_through =
+    Object.selectionForField "(Maybe String)" "booked_through" [] (Decode.string |> Decode.nullable)
+
+
+confirmation : SelectionSet (Maybe String) Tour.Object.Activity
+confirmation =
+    Object.selectionForField "(Maybe String)" "confirmation" [] (Decode.string |> Decode.nullable)
 
 
 currency : SelectionSet (Maybe String) Tour.Object.Activity
@@ -49,6 +59,11 @@ price =
     Object.selectionForField "(Maybe Int)" "price" [] (Decode.int |> Decode.nullable)
 
 
+provider : SelectionSet (Maybe String) Tour.Object.Activity
+provider =
+    Object.selectionForField "(Maybe String)" "provider" [] (Decode.string |> Decode.nullable)
+
+
 section_id : SelectionSet String Tour.Object.Activity
 section_id =
     Object.selectionForField "String" "section_id" [] Decode.string
@@ -59,9 +74,9 @@ snippets object_ =
     Object.selectionForCompositeField "snippets" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
 
-starts_at : SelectionSet (Maybe String) Tour.Object.Activity
+starts_at : SelectionSet (Maybe Float) Tour.Object.Activity
 starts_at =
-    Object.selectionForField "(Maybe String)" "starts_at" [] (Decode.string |> Decode.nullable)
+    Object.selectionForField "(Maybe Float)" "starts_at" [] (Decode.float |> Decode.nullable)
 
 
 title : SelectionSet (Maybe String) Tour.Object.Activity

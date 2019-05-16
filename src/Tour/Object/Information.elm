@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Object.Information exposing (day, notes, section_id, snippets, title, type_, uuid)
+module Tour.Object.Information exposing (day, info_type, notes, section_id, snippets, title, type_, uuid)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -27,6 +27,11 @@ type_ =
 day : SelectionSet (Maybe Int) Tour.Object.Information
 day =
     Object.selectionForField "(Maybe Int)" "day" [] (Decode.int |> Decode.nullable)
+
+
+info_type : SelectionSet (Maybe String) Tour.Object.Information
+info_type =
+    Object.selectionForField "(Maybe String)" "info_type" [] (Decode.string |> Decode.nullable)
 
 
 notes : SelectionSet (Maybe String) Tour.Object.Information

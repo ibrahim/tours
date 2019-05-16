@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Object.Transportation exposing (currency, day, duration, notes, price, section_id, snippets, starts_at, title, type_, uuid)
+module Tour.Object.Transportation exposing (booked_through, carrier, confirmation, currency, day, duration, notes, phone_number, price, section_id, snippets, starts_at, title, type_, uuid)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -22,6 +22,21 @@ import Tour.Union
 type_ : SelectionSet String Tour.Object.Transportation
 type_ =
     Object.selectionForField "String" "_type" [] Decode.string
+
+
+booked_through : SelectionSet (Maybe String) Tour.Object.Transportation
+booked_through =
+    Object.selectionForField "(Maybe String)" "booked_through" [] (Decode.string |> Decode.nullable)
+
+
+carrier : SelectionSet (Maybe String) Tour.Object.Transportation
+carrier =
+    Object.selectionForField "(Maybe String)" "carrier" [] (Decode.string |> Decode.nullable)
+
+
+confirmation : SelectionSet (Maybe String) Tour.Object.Transportation
+confirmation =
+    Object.selectionForField "(Maybe String)" "confirmation" [] (Decode.string |> Decode.nullable)
 
 
 currency : SelectionSet (Maybe String) Tour.Object.Transportation
@@ -44,6 +59,11 @@ notes =
     Object.selectionForField "(Maybe String)" "notes" [] (Decode.string |> Decode.nullable)
 
 
+phone_number : SelectionSet (Maybe String) Tour.Object.Transportation
+phone_number =
+    Object.selectionForField "(Maybe String)" "phone_number" [] (Decode.string |> Decode.nullable)
+
+
 price : SelectionSet (Maybe Int) Tour.Object.Transportation
 price =
     Object.selectionForField "(Maybe Int)" "price" [] (Decode.int |> Decode.nullable)
@@ -59,9 +79,9 @@ snippets object_ =
     Object.selectionForCompositeField "snippets" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
 
-starts_at : SelectionSet (Maybe String) Tour.Object.Transportation
+starts_at : SelectionSet (Maybe Float) Tour.Object.Transportation
 starts_at =
-    Object.selectionForField "(Maybe String)" "starts_at" [] (Decode.string |> Decode.nullable)
+    Object.selectionForField "(Maybe Float)" "starts_at" [] (Decode.float |> Decode.nullable)
 
 
 title : SelectionSet (Maybe String) Tour.Object.Transportation

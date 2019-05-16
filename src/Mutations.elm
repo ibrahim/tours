@@ -74,12 +74,28 @@ saveEventMutation inputs trip_id section_id event_id =
                 CreateEvent _ ->
                     identity
 
-                UpdateEvent { title, price } ->
+                UpdateEvent form ->
                     \x ->
                         { x
                             | uuid = fromMaybe <| Maybe.map Uuid.toString event_id
-                            , title = fromMaybe title
-                            , price = fromMaybe price
+                            , title = fromMaybe form.title
+                            , price = fromMaybe form.price
+                            , currency = fromMaybe form.currency
+                            , notes = fromMaybe form.notes
+                            , starts_at = fromMaybe form.starts_at
+                            , duration = fromMaybe form.duration
+                            , booked_through = fromMaybe form.booked_through
+                            , confirmation = fromMaybe form.confirmation
+                            , provider = fromMaybe form.provider
+                            , carrier = fromMaybe form.carrier
+                            , phone_number = fromMaybe form.phone_number
+                            , airline = fromMaybe form.airline
+                            , flight_number = fromMaybe form.flight_number
+                            , terminal = fromMaybe form.terminal
+                            , gate = fromMaybe form.gate
+                            , cabin_type = fromMaybe form.cabin_type
+                            , cabin_number = fromMaybe form.cabin_number
+                            , info_type = fromMaybe form.info_type
                         }
 
         required_args =

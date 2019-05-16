@@ -121,61 +121,112 @@ eventSelection =
 
 
 activitySelection =
-    SelectionSet.map5 Activity
-        Tour.Object.Activity.uuid
-        Tour.Object.Activity.section_id
-        Tour.Object.Activity.type_
-        Tour.Object.Activity.title
-        Tour.Object.Activity.price
+    SelectionSet.succeed Activity
+        |> with Tour.Object.Activity.uuid
+        |> with Tour.Object.Activity.section_id
+        |> with Tour.Object.Activity.type_
+        |> with Tour.Object.Activity.title
+        |> with Tour.Object.Activity.price
+        |> with Tour.Object.Activity.notes
+        |> with Tour.Object.Activity.currency
+        |> with Tour.Object.Activity.starts_at
+        |> with Tour.Object.Activity.duration
+        |> with Tour.Object.Activity.booked_through
+        |> with Tour.Object.Activity.confirmation
+        |> with Tour.Object.Activity.provider
 
 
 lodgingSelection =
-    SelectionSet.map5 Lodging
-        Tour.Object.Lodging.uuid
-        Tour.Object.Lodging.section_id
-        Tour.Object.Lodging.type_
-        Tour.Object.Lodging.title
-        Tour.Object.Lodging.price
+    SelectionSet.succeed Lodging
+        |> with Tour.Object.Lodging.uuid
+        |> with Tour.Object.Lodging.section_id
+        |> with Tour.Object.Lodging.type_
+        |> with Tour.Object.Lodging.title
+        |> with Tour.Object.Lodging.price
+        |> with Tour.Object.Lodging.currency
+        |> with Tour.Object.Lodging.notes
+        |> with Tour.Object.Lodging.starts_at
+        |> with Tour.Object.Lodging.duration
+        |> with Tour.Object.Lodging.booked_through
+        |> with Tour.Object.Lodging.confirmation
+        |> with Tour.Object.Lodging.provider
 
 
 flightSelection =
-    SelectionSet.map5 Flight
-        Tour.Object.Flight.uuid
-        Tour.Object.Flight.section_id
-        Tour.Object.Flight.type_
-        Tour.Object.Flight.title
-        Tour.Object.Flight.price
+    SelectionSet.succeed Flight
+        |> with Tour.Object.Flight.uuid
+        |> with Tour.Object.Flight.section_id
+        |> with Tour.Object.Flight.type_
+        |> with Tour.Object.Flight.title
+        |> with Tour.Object.Flight.price
+        |> with Tour.Object.Flight.currency
+        |> with Tour.Object.Flight.notes
+        |> with Tour.Object.Flight.starts_at
+        |> with Tour.Object.Flight.duration
+        |> with Tour.Object.Flight.booked_through
+        |> with Tour.Object.Flight.confirmation
+        |> with Tour.Object.Flight.airline
+        |> with Tour.Object.Flight.flight_number
+        |> with Tour.Object.Flight.terminal
+        |> with Tour.Object.Flight.gate
 
 
 transportationSelection =
-    SelectionSet.map5 Transportation
-        Tour.Object.Transportation.uuid
-        Tour.Object.Transportation.section_id
-        Tour.Object.Transportation.type_
-        Tour.Object.Transportation.title
-        Tour.Object.Transportation.price
+    SelectionSet.succeed Transportation
+        |> with Tour.Object.Transportation.uuid
+        |> with Tour.Object.Transportation.section_id
+        |> with Tour.Object.Transportation.type_
+        |> with Tour.Object.Transportation.title
+        |> with Tour.Object.Transportation.price
+        |> with Tour.Object.Transportation.currency
+        |> with Tour.Object.Transportation.notes
+        |> with Tour.Object.Transportation.starts_at
+        |> with Tour.Object.Transportation.duration
+        |> with Tour.Object.Transportation.booked_through
+        |> with Tour.Object.Transportation.confirmation
+        |> with Tour.Object.Transportation.carrier
+        |> with Tour.Object.Transportation.phone_number
 
 
 cruiseSelection =
-    SelectionSet.map5 Cruise
-        Tour.Object.Cruise.uuid
-        Tour.Object.Cruise.section_id
-        Tour.Object.Cruise.type_
-        Tour.Object.Cruise.title
-        Tour.Object.Cruise.price
+    SelectionSet.succeed Cruise
+        |> with Tour.Object.Cruise.uuid
+        |> with Tour.Object.Cruise.section_id
+        |> with Tour.Object.Cruise.type_
+        |> with Tour.Object.Cruise.title
+        |> with Tour.Object.Cruise.price
+        |> with Tour.Object.Cruise.currency
+        |> with Tour.Object.Cruise.notes
+        |> with Tour.Object.Cruise.starts_at
+        |> with Tour.Object.Cruise.duration
+        |> with Tour.Object.Cruise.booked_through
+        |> with Tour.Object.Cruise.confirmation
+        |> with Tour.Object.Cruise.carrier
+        |> with Tour.Object.Cruise.cabin_type
+        |> with Tour.Object.Cruise.cabin_number
 
 
 informationSelection =
-    SelectionSet.map4 Information
-        Tour.Object.Information.uuid
-        Tour.Object.Information.section_id
-        Tour.Object.Information.type_
-        Tour.Object.Information.title
+    SelectionSet.succeed Information
+        |> with Tour.Object.Information.uuid
+        |> with Tour.Object.Information.section_id
+        |> with Tour.Object.Information.type_
+        |> with Tour.Object.Information.title
+        |> with Tour.Object.Information.notes
+        |> with Tour.Object.Information.info_type
 
 
 diningSelection =
-    SelectionSet.map4 Dining
-        Tour.Object.Dining.uuid
-        Tour.Object.Dining.section_id
-        Tour.Object.Dining.type_
-        Tour.Object.Dining.title
+    SelectionSet.succeed Dining
+        |> with Tour.Object.Dining.uuid
+        |> with Tour.Object.Dining.section_id
+        |> with Tour.Object.Dining.type_
+        |> with Tour.Object.Dining.title
+        |> with Tour.Object.Dining.price
+        |> with Tour.Object.Dining.currency
+        |> with Tour.Object.Dining.notes
+        |> with Tour.Object.Dining.starts_at
+        |> with Tour.Object.Dining.duration
+        |> with Tour.Object.Dining.booked_through
+        |> with Tour.Object.Dining.confirmation
+        |> with Tour.Object.Dining.provider
