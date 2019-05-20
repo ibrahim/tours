@@ -2,6 +2,7 @@ module Page.Planner exposing (Model, Msg(..), init, subscriptions, toSession, up
 
 import Api
 import Browser
+import Debug exposing (log)
 import Graphql.Http
 import Graphql.Http.GraphqlError
 import Html exposing (..)
@@ -32,7 +33,7 @@ type Msg
     | GotFetchEventResponse (RemoteData (Graphql.Http.Error UserTrip) UserTrip)
     | GotCreateEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
     | GotDeleteEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
-    | GotCreateSectionResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
+    | GotSaveSectionResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
     | GotUpdateEventResponse (RemoteData (Graphql.Http.Error (Maybe UserTrip)) (Maybe UserTrip))
     | ShowEvent EventId
     | DeleteEvent
@@ -43,13 +44,22 @@ type Msg
     | ClearProblems
     | UpdateEventForm EventForm
     | SubmittedEventForm EventId EventForm
-    | SubmitSection String
+    | SubmitSection (Maybe SectionId) String
     | NoOp
 
 
 
 -- Msg }}}
 -- Model {{{
+
+
+type alias Model =
+    { session : Session
+    , trip : RemoteData (Graphql.Http.Error UserTrip) UserTrip
+    , trip_id : TripId
+    , problems : List Problem
+    , screen : Screen
+    }
 
 
 type EventType
@@ -69,23 +79,19 @@ type EventFormTabs
     | InfoTab
 
 
+type ListSectionMode
+    = ListEvents
+    | EditSection String
+
+
 type Screen
     = ListAll
     | ListSections
-    | ListSection SectionId
+    | ListSection SectionId ListSectionMode
     | Search String
     | ListByType EventType
     | EditEvent EventId EventForm Deletion EventFormTabs
     | NewSection String
-
-
-type alias Model =
-    { session : Session
-    , trip : RemoteData (Graphql.Http.Error UserTrip) UserTrip
-    , trip_id : TripId
-    , problems : List Problem
-    , screen : Screen
-    }
 
 
 
@@ -135,6 +141,7 @@ init session uuid =
 
 update msg model =
     case msg of
+        -- {{{ GotUserTripResponse
         GotUserTripResponse response ->
             let
                 resolve =
@@ -149,6 +156,8 @@ update msg model =
             in
             Api.processQueryResponse response model resolve reject
 
+        -- }}}
+        --{{{ GotCreateEventResponse
         GotCreateEventResponse response ->
             let
                 resolve =
@@ -159,6 +168,8 @@ update msg model =
             in
             Api.processMutationResponse response model resolve reject
 
+        --}}}
+        --{{{ GotDeleteEventResponse
         GotDeleteEventResponse response ->
             let
                 section_id =
@@ -172,7 +183,7 @@ update msg model =
                 next_screen =
                     case section_id of
                         Just uuid ->
-                            ListSection <| Uuid uuid
+                            ListSection (Uuid uuid) ListEvents
 
                         Nothing ->
                             ListSections
@@ -189,16 +200,24 @@ update msg model =
             in
             Api.processMutationResponse response model resolve reject
 
-        GotCreateSectionResponse response ->
+        --}}}
+        --{{{ GotSaveSectionResponse
+        GotSaveSectionResponse response ->
             let
                 resolve =
-                    \data -> { model | trip = RemoteData.map (always data) model.trip, screen = ListAll }
+                    \data ->
+                        { model
+                            | trip = RemoteData.map (always data) model.trip
+                            , screen = ListSections
+                        }
 
                 reject =
                     \problems -> { model | problems = problems }
             in
             Api.processMutationResponse response model resolve reject
 
+        --}}}
+        --{{{GotUpdateEventResponse
         GotUpdateEventResponse response ->
             let
                 screen =
@@ -215,7 +234,7 @@ update msg model =
                 new_screen =
                     case section_id of
                         Just uuid ->
-                            ListSection <| Uuid uuid
+                            ListSection (Uuid uuid) ListEvents
 
                         Nothing ->
                             ListSections
@@ -232,6 +251,8 @@ update msg model =
             in
             Api.processMutationResponse response model resolve reject
 
+        --}}}
+        --{{{ GotFetchEventResponse
         GotFetchEventResponse response ->
             let
                 resolve data =
@@ -263,21 +284,33 @@ update msg model =
             in
             Api.processQueryResponse response model resolve reject
 
+        --}}}
+        --{{{ CreateNewEvent
         CreateNewEvent (EventType event_type) section_id ->
             ( model, saveEvent (CreateEvent { event_type = event_type }) model.session model.trip_id section_id )
 
+        --}}}
+        --{{{ReportProblem
         ReportProblem problem ->
             ( { model | problems = [ problem ] }, Cmd.none )
 
+        --}}}
+        --{{{Goto
         Goto screen ->
             ( { model | screen = screen }, Cmd.none )
 
+        --}}}
+        --{{{ShowEvent
         ShowEvent uuid ->
             ( model, fetchEvent model.session model.trip_id (Just uuid) )
 
+        --}}}
+        --{{{ClearProblems
         ClearProblems ->
             ( { model | problems = [] }, Cmd.none )
 
+        --}}}
+        --{{{SubmittedEventForm
         SubmittedEventForm event_id event_form ->
             let
                 section_id =
@@ -285,6 +318,8 @@ update msg model =
             in
             ( model, updateEvent (UpdateEvent event_form) model.session model.trip_id section_id (Just event_id) )
 
+        --}}}
+        --{{{DeleteEvent
         DeleteEvent ->
             let
                 screen =
@@ -300,19 +335,38 @@ update msg model =
             in
             ( { model | screen = new_screen }, Cmd.none )
 
+        --}}}
+        --{{{ConfirmedDeleteEvent
         ConfirmedDeleteEvent event_id ->
             ( model, deleteEvent model.session model.trip_id event_id )
 
+        --}}}
+        --{{{UpdateEventForm
         UpdateEventForm event_form ->
             ( { model | screen = EditEvent (Uuid event_form.uuid) event_form UnconfirmedDelete DetailsTab }, Cmd.none )
 
-        SubmitSection title ->
+        --}}}
+        --{{{SubmitSection
+        SubmitSection section_id title ->
             let
                 section_input =
-                    CreateSection { title = title, trip_id = Uuid.toString model.trip_id }
+                    case section_id of
+                        Just section_id_ ->
+                            UpdateSection
+                                { title = title
+                                , uuid = section_id_
+                                , trip_id = model.trip_id
+                                , is_day = Nothing
+                                , day_date = Nothing
+                                , day_order = Nothing
+                                }
+
+                        Nothing ->
+                            CreateSection { title = title, trip_id = model.trip_id }
             in
             ( model, saveSection section_input model.session model.trip_id )
 
+        --}}}
         NoOp ->
             ( model, Cmd.none )
 
@@ -349,7 +403,7 @@ view { trip, session, problems, screen } =
                                                         ListByType event_type ->
                                                             viewTrip screen trip
 
-                                                        ListSection section_id ->
+                                                        ListSection section_id _ ->
                                                             let
                                                                 section =
                                                                     getSection section_id trip_.sections
@@ -359,7 +413,7 @@ view { trip, session, problems, screen } =
                                                             in
                                                             case section of
                                                                 Just section_ ->
-                                                                    viewListSection section_ events trip_
+                                                                    viewListSection screen section_ events trip_
 
                                                                 Nothing ->
                                                                     text "Section Not Found"
@@ -408,6 +462,54 @@ viewEventForm screen form trip =
                 Nothing ->
                     "Section"
 
+        --{{{ float_to_time_input
+        float_to_time_input time_f =
+            let
+                lzero str =
+                    if String.length str == 1 then
+                        "0" ++ str
+
+                    else if str == "" then
+                        "00"
+
+                    else
+                        str
+
+                rzero str =
+                    if String.length str == 1 then
+                        str ++ "0"
+
+                    else if str == "" then
+                        "00"
+
+                    else
+                        str
+
+                hour_min_pair s =
+                    case s of
+                        [ a ] ->
+                            [ lzero a, "00" ]
+
+                        a :: b :: _ ->
+                            [ lzero a, rzero b ]
+
+                        [] ->
+                            [ "00", "00" ]
+
+                time_str =
+                    case Maybe.map String.fromFloat time_f of
+                        Just t ->
+                            t
+                                |> String.split "."
+                                |> hour_min_pair
+                                |> String.join ":"
+
+                        Nothing ->
+                            ""
+            in
+            time_str
+
+        --}}}
         -- {{{ notesField
         notesField =
             div [ class "field" ]
@@ -555,10 +657,30 @@ viewEventForm screen form trip =
             div [ class "field" ]
                 [ label [ class "label" ] [ text "Starts At" ]
                 , input
-                    [ class "input"
-                    , type_ "text"
-                    , onInput (\o -> UpdateEventForm { form | starts_at = String.toFloat o })
-                    , value (Maybe.withDefault "" (Maybe.map String.fromFloat form.starts_at))
+                    [ class "input time"
+                    , type_ "time"
+                    , onInput
+                        (\o ->
+                            UpdateEventForm { form | starts_at = String.toFloat <| String.replace ":" "." o }
+                        )
+                    , value <| log "starts val" (float_to_time_input form.starts_at)
+                    ]
+                    []
+                ]
+
+        -- }}}
+        -- {{{ ends_atField
+        ends_atField =
+            div [ class "field" ]
+                [ label [ class "label" ] [ text "Ends At" ]
+                , input
+                    [ class "input time"
+                    , type_ "time"
+                    , onInput
+                        (\o ->
+                            UpdateEventForm { form | ends_at = String.toFloat <| String.replace ":" "." o }
+                        )
+                    , value <| log "end value " (float_to_time_input form.ends_at)
                     ]
                     []
                 ]
@@ -634,14 +756,7 @@ viewEventForm screen form trip =
                 ]
 
         -- }}}
-        renderPriceField =
-            case form.event_type of
-                "Event::Information" ->
-                    text ""
-
-                _ ->
-                    priceField
-
+        --{{{is_confirmed
         is_confirmed =
             case screen of
                 EditEvent _ _ UnconfirmedDelete _ ->
@@ -653,6 +768,8 @@ viewEventForm screen form trip =
                 _ ->
                     False
 
+        --}}}
+        --{{{toggle_confirm
         toggle_confirm =
             case screen of
                 EditEvent uuid form_ UnconfirmedDelete tab ->
@@ -664,11 +781,18 @@ viewEventForm screen form trip =
                 same ->
                     same
 
+        --}}}
+        --{{{renderDetailsForm
         renderDetailsForm =
             case form.event_type of
                 "Event::Flight" ->
                     div []
-                        [ notesField
+                        [ starts_atField
+                        , ends_atField
+                        , durationField
+                        , priceField
+                        , currencyField
+                        , notesField
                         , airlineField
                         , flight_numberField
                         , terminalField
@@ -677,7 +801,12 @@ viewEventForm screen form trip =
 
                 "Event::Lodging" ->
                     div []
-                        [ notesField
+                        [ starts_atField
+                        , ends_atField
+                        , durationField
+                        , priceField
+                        , currencyField
+                        , notesField
                         , booked_throughField
                         , confirmationField
                         , providerField
@@ -685,7 +814,12 @@ viewEventForm screen form trip =
 
                 "Event::Activity" ->
                     div []
-                        [ notesField
+                        [ starts_atField
+                        , ends_atField
+                        , durationField
+                        , priceField
+                        , currencyField
+                        , notesField
                         , booked_throughField
                         , confirmationField
                         , providerField
@@ -693,7 +827,12 @@ viewEventForm screen form trip =
 
                 "Event::Transportation" ->
                     div []
-                        [ notesField
+                        [ starts_atField
+                        , ends_atField
+                        , durationField
+                        , priceField
+                        , currencyField
+                        , notesField
                         , booked_throughField
                         , confirmationField
                         , providerField
@@ -702,7 +841,12 @@ viewEventForm screen form trip =
 
                 "Event::Cruise" ->
                     div []
-                        [ notesField
+                        [ starts_atField
+                        , ends_atField
+                        , durationField
+                        , priceField
+                        , currencyField
+                        , notesField
                         , booked_throughField
                         , confirmationField
                         , providerField
@@ -712,7 +856,12 @@ viewEventForm screen form trip =
 
                 "Event::Dining" ->
                     div []
-                        [ notesField
+                        [ starts_atField
+                        , ends_atField
+                        , durationField
+                        , priceField
+                        , currencyField
+                        , notesField
                         , booked_throughField
                         , confirmationField
                         , providerField
@@ -729,6 +878,8 @@ viewEventForm screen form trip =
                 _ ->
                     text ""
 
+        --}}}
+        --{{{render_forms
         renderPhotosForm =
             div [] [ text "Photos form" ]
 
@@ -762,6 +913,8 @@ viewEventForm screen form trip =
 
                 _ ->
                     text ""
+
+        --}}}
     in
     div [ class "edit-event" ]
         [ Html.form []
@@ -769,7 +922,7 @@ viewEventForm screen form trip =
                 [ breadcrumb
                     [ ( "Home", Href (Route.href Route.Home) )
                     , ( trip.name, Href (Route.href <| Route.Planner <| Uuid trip.uuid) )
-                    , ( section_title, OnClick (onClick <| Goto <| ListSection <| Uuid <| form.section_id) )
+                    , ( section_title, OnClick (onClick <| Goto <| ListSection (Uuid form.section_id) ListEvents) )
                     , ( Maybe.withDefault "..." form.title, Href (Route.href <| Route.Planner <| Uuid trip.uuid) )
                     ]
                 , label [ class "label" ] [ text "Title" ]
@@ -909,7 +1062,7 @@ viewItinirary screen trip =
                 ListAll ->
                     List.map viewEventItem events
 
-                ListSection section_id ->
+                ListSection section_id _ ->
                     List.map viewEventItem <|
                         List.filter
                             (\event -> event.section_id == Uuid.toString section_id)
@@ -927,7 +1080,7 @@ viewItinirary screen trip =
 
 
 --}}}
--- {{{ viewListSection
+-- {{{ ListSection
 
 
 viewEventFull event =
@@ -948,30 +1101,69 @@ viewEventFull event =
                     [ text <| Maybe.withDefault "..." event.title ]
                 ]
             , p [ class "event-desc" ]
-                [ text "events notes" ]
+                [ text <| Maybe.withDefault "" event.notes ]
             ]
         ]
 
 
-viewListSection section events trip =
+viewListSection screen section events trip =
     let
         sectionHeader =
-            div [ class "section-hdr level" ]
-                [ div [ class "level-left" ] [ span [ class "level-item title" ] [ text section.title ] ]
-                , div [ class "level-right" ]
-                    [ p [ class "level-item" ]
-                        [ createEventButton section.uuid ]
-                    ]
+            div [ class "section-hdr" ]
+                [ div [ class "level" ]
+                    (case screen of
+                        ListSection uuid ListEvents ->
+                            [ div [ class "level-right" ]
+                                [ a
+                                    [ href ""
+                                    , onClick <| Goto <| ListSection (Uuid section.uuid) (EditSection section.title)
+                                    , class "level-item title"
+                                    ]
+                                    [ text section.title ]
+                                ]
+                            ]
+
+                        ListSection uuid (EditSection title) ->
+                            [ div [ class "field  level-item has-addons" ]
+                                [ div [ class "control is-expanded" ]
+                                    [ input
+                                        [ class "input"
+                                        , type_ "text"
+                                        , placeholder "Section / Day name"
+                                        , onInput (\o -> Goto <| ListSection (Uuid section.uuid) (EditSection o))
+                                        , value title
+                                        ]
+                                        []
+                                    ]
+                                , div [ class "control" ]
+                                    [ button
+                                        [ class "button is-link is-info"
+                                        , href ""
+                                        , onClick (SubmitSection (Just (Uuid section.uuid)) title)
+                                        ]
+                                        [ text "Done" ]
+                                    ]
+                                ]
+                            ]
+
+                        _ ->
+                            [ text "" ]
+                    )
                 ]
     in
     div []
         [ breadcrumb
             [ ( "Home", Href (Route.href Route.Home) )
             , ( trip.name, Href (Route.href <| Route.Planner (Uuid trip.uuid)) )
-            , ( section.title, OnClick (onClick <| Goto <| ListSection <| Uuid section.uuid) )
+            , ( section.title, OnClick (onClick <| Goto <| ListSection (Uuid section.uuid) ListEvents) )
             ]
         , sectionHeader
-        , div [] (List.map viewEventFull events)
+        , div [ class "level" ]
+            [ p [ class "level-item" ]
+                [ createEventButton section.uuid ]
+            ]
+        , div []
+            (List.map viewEventFull <| List.filter (\o -> o.section_id == section.uuid) events)
         ]
 
 
@@ -989,26 +1181,35 @@ viewSections sections events =
             div
                 [ class "section-summary"
                 ]
-                [ div [ class "section-body" ]
+                [ div [ class "section-body", onClick <| Goto <| ListSection (Uuid uuid) ListEvents ]
                     [ div [ class "title" ]
-                        [ text title ]
+                        [ a
+                            [ href ""
+                            , onClick <| Goto <| ListSection (Uuid uuid) ListEvents
+                            ]
+                            [ text title ]
+                        ]
                     , div [ class "events-icons" ]
                         (List.map
                             (\o ->
-                                a
-                                    [ href ""
-                                    , class <| "event " ++ lower_event_name o
-                                    , onClick <| Goto <| ListSection <| Uuid uuid
-                                    ]
-                                    [ span [ class <| "fas fa-" ++ lower_event_name o ] []
-                                    ]
+                                if o.section_id == uuid then
+                                    a
+                                        [ href ""
+                                        , class <| "event " ++ lower_event_name o
+                                        , onClick <| Goto <| ListSection (Uuid uuid) ListEvents
+                                        ]
+                                        [ span [ class <| "fas fa-" ++ lower_event_name o ] []
+                                        ]
+
+                                else
+                                    text ""
                             )
                             events
                         )
                     ]
                 , div [ class "more" ]
                     [ a
-                        [ href "", onClick <| Goto <| ListSection <| Uuid uuid ]
+                        [ href "", onClick <| Goto <| ListSection (Uuid uuid) ListEvents ]
                         [ span [ class "fas fa-chevron-right" ] [] ]
                     ]
                 ]
@@ -1043,7 +1244,7 @@ viewTrip screen remote_response =
 
 event_to_record event =
     case event of
-        Dining uuid section_id event_type title price currency notes starts_at duration booked_through confirmation provider ->
+        Dining uuid section_id event_type title price currency notes starts_at ends_at duration booked_through confirmation provider ->
             { uuid = uuid
             , section_id = section_id
             , event_type = event_type
@@ -1052,6 +1253,7 @@ event_to_record event =
             , currency = currency
             , notes = notes
             , starts_at = starts_at
+            , ends_at = ends_at
             , duration = duration
             , booked_through = booked_through
             , confirmation = confirmation
@@ -1077,6 +1279,7 @@ event_to_record event =
             , price = Nothing
             , currency = Nothing
             , starts_at = Nothing
+            , ends_at = Nothing
             , duration = Nothing
             , booked_through = Nothing
             , confirmation = Nothing
@@ -1091,7 +1294,7 @@ event_to_record event =
             , phone_number = Nothing
             }
 
-        Activity uuid section_id event_type title price currency notes starts_at duration booked_through confirmation provider ->
+        Activity uuid section_id event_type title price currency notes starts_at ends_at duration booked_through confirmation provider ->
             { uuid = uuid
             , section_id = section_id
             , event_type = event_type
@@ -1100,6 +1303,7 @@ event_to_record event =
             , currency = currency
             , notes = notes
             , starts_at = starts_at
+            , ends_at = ends_at
             , duration = duration
             , booked_through = booked_through
             , confirmation = confirmation
@@ -1115,7 +1319,7 @@ event_to_record event =
             , info_type = Nothing
             }
 
-        Lodging uuid section_id event_type title price currency notes starts_at duration booked_through confirmation provider ->
+        Lodging uuid section_id event_type title price currency notes starts_at ends_at duration booked_through confirmation provider ->
             { uuid = uuid
             , section_id = section_id
             , event_type = event_type
@@ -1124,6 +1328,7 @@ event_to_record event =
             , currency = currency
             , notes = notes
             , starts_at = starts_at
+            , ends_at = ends_at
             , duration = duration
             , booked_through = booked_through
             , confirmation = confirmation
@@ -1139,7 +1344,7 @@ event_to_record event =
             , info_type = Nothing
             }
 
-        Flight uuid section_id event_type title price currency notes starts_at duration booked_through confirmation airline flight_number terminal gate ->
+        Flight uuid section_id event_type title price currency notes starts_at ends_at duration booked_through confirmation airline flight_number terminal gate ->
             { uuid = uuid
             , section_id = section_id
             , event_type = event_type
@@ -1148,6 +1353,7 @@ event_to_record event =
             , currency = currency
             , notes = notes
             , starts_at = starts_at
+            , ends_at = ends_at
             , duration = duration
             , booked_through = booked_through
             , confirmation = confirmation
@@ -1163,7 +1369,7 @@ event_to_record event =
             , info_type = Nothing
             }
 
-        Transportation uuid section_id event_type title price currency notes starts_at duration booked_through confirmation carrier phone_number ->
+        Transportation uuid section_id event_type title price currency notes starts_at ends_at duration booked_through confirmation carrier phone_number ->
             { uuid = uuid
             , section_id = section_id
             , event_type = event_type
@@ -1172,6 +1378,7 @@ event_to_record event =
             , currency = currency
             , notes = notes
             , starts_at = starts_at
+            , ends_at = ends_at
             , duration = duration
             , booked_through = booked_through
             , confirmation = confirmation
@@ -1187,7 +1394,7 @@ event_to_record event =
             , info_type = Nothing
             }
 
-        Cruise uuid section_id event_type title price currency notes starts_at duration booked_through confirmation carrier cabin_type cabin_number ->
+        Cruise uuid section_id event_type title price currency notes starts_at ends_at duration booked_through confirmation carrier cabin_type cabin_number ->
             { uuid = uuid
             , section_id = section_id
             , event_type = event_type
@@ -1196,6 +1403,7 @@ event_to_record event =
             , currency = currency
             , notes = notes
             , starts_at = starts_at
+            , ends_at = ends_at
             , duration = duration
             , booked_through = booked_through
             , confirmation = confirmation
@@ -1243,7 +1451,7 @@ viewEventItem { title, uuid, section_id, price } =
 
 sectionForm : String -> Html Msg
 sectionForm title =
-    Html.form [ onSubmit (SubmitSection title) ]
+    Html.form [ onSubmit (SubmitSection Nothing title) ]
         [ div [ class "field" ]
             [ label [ class "label" ] [ text "Section" ]
             , div [ class "control has-icons-left" ]
@@ -1539,11 +1747,11 @@ saveSection : SectionInputs -> Session -> TripId -> Cmd Msg
 saveSection section session trip_id =
     case session of
         LoggedIn _ viewer ->
-            Mutations.sectionRequest section trip_id Nothing
+            Mutations.sectionRequest section trip_id
                 |> Graphql.Http.withHeader "authorization" ("Bearer " ++ Viewer.tokenStr viewer)
                 |> Graphql.Http.send
                     (RemoteData.fromResult
-                        >> GotCreateSectionResponse
+                        >> GotSaveSectionResponse
                     )
 
         Guest _ ->

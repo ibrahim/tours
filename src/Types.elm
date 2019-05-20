@@ -56,16 +56,17 @@ type SectionInputs
 
 type alias SectionNewForm =
     { title : String
-    , trip_id : String
+    , trip_id : Uuid
     }
 
 
 type alias SectionEditForm =
     { title : String
-    , trip_id : String
-    , is_day : Bool
-    , day_date : Int
-    , day_order : Int
+    , uuid : Uuid
+    , trip_id : Uuid
+    , is_day : Maybe Bool
+    , day_date : Maybe Int
+    , day_order : Maybe Int
     }
 
 
@@ -93,6 +94,7 @@ type alias EventForm =
     , currency : Currency
     , notes : Notes
     , starts_at : StartsAt
+    , ends_at : EndsAt
     , duration : Duration
     , booked_through : BookedThrough
     , confirmation : Confirmation
@@ -321,6 +323,10 @@ type alias StartsAt =
     Maybe Float
 
 
+type alias EndsAt =
+    Maybe Float
+
+
 type alias Duration =
     Maybe Int
 
@@ -374,10 +380,10 @@ type alias InfoType =
 
 
 type Event
-    = Activity EventUuid SectionUuid EventType Title Price Currency Notes StartsAt Duration BookedThrough Confirmation Provider
-    | Lodging EventUuid SectionUuid EventType Title Price Currency Notes StartsAt Duration BookedThrough Confirmation Provider
-    | Flight EventUuid SectionUuid EventType Title Price Currency Notes StartsAt Duration BookedThrough Confirmation AirLine FlightNumber Terminal Gate
-    | Transportation EventUuid SectionUuid EventType Title Price Currency Notes StartsAt Duration BookedThrough Confirmation Carrier PhoneNumber
-    | Cruise EventUuid SectionUuid EventType Title Price Currency Notes StartsAt Duration BookedThrough Confirmation Carrier CabinType CabinNumber
+    = Activity EventUuid SectionUuid EventType Title Price Currency Notes StartsAt EndsAt Duration BookedThrough Confirmation Provider
+    | Lodging EventUuid SectionUuid EventType Title Price Currency Notes StartsAt EndsAt Duration BookedThrough Confirmation Provider
+    | Flight EventUuid SectionUuid EventType Title Price Currency Notes StartsAt EndsAt Duration BookedThrough Confirmation AirLine FlightNumber Terminal Gate
+    | Transportation EventUuid SectionUuid EventType Title Price Currency Notes EndsAt StartsAt Duration BookedThrough Confirmation Carrier PhoneNumber
+    | Cruise EventUuid SectionUuid EventType Title Price Currency Notes StartsAt EndsAt Duration BookedThrough Confirmation Carrier CabinType CabinNumber
+    | Dining EventUuid SectionUuid EventType Title Price Currency Notes StartsAt EndsAt Duration BookedThrough Confirmation Provider
     | Information EventUuid SectionUuid EventType Title Notes InfoType
-    | Dining EventUuid SectionUuid EventType Title Price Currency Notes StartsAt Duration BookedThrough Confirmation Provider

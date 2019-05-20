@@ -23,21 +23,21 @@ import Uuid exposing (Uuid, toString)
 -- Section
 
 
-saveSectionMutation : SectionInputs -> TripId -> Maybe SectionId -> SelectionSet (Maybe UserTrip) RootMutation
-saveSectionMutation inputs trip_id section_id =
+saveSectionMutation : SectionInputs -> TripId -> SelectionSet (Maybe UserTrip) RootMutation
+saveSectionMutation inputs trip_id =
     let
         section_input =
             case inputs of
                 CreateSection _ ->
                     identity
 
-                UpdateSection { title, is_day, day_order, day_date } ->
+                UpdateSection { title, is_day, uuid, day_order, day_date } ->
                     \x ->
                         { x
-                            | uuid = fromMaybe <| Maybe.map Uuid.toString section_id
-                            , is_day = Present is_day
-                            , day_order = Present day_order
-                            , day_date = Present day_date
+                            | uuid = Present <| Uuid.toString uuid
+                            , is_day = fromMaybe is_day
+                            , day_order = fromMaybe day_order
+                            , day_date = fromMaybe day_date
                         }
 
         required_args =
@@ -56,9 +56,9 @@ saveSectionMutation inputs trip_id section_id =
     Mutation.saveSection saveSectionInput <| SaveSectionPayload.user <| Queries.userTripSelection trip_id Nothing
 
 
-sectionRequest : SectionInputs -> TripId -> Maybe SectionId -> Graphql.Http.Request (Maybe UserTrip)
-sectionRequest section trip_id section_id =
-    saveSectionMutation section trip_id section_id
+sectionRequest : SectionInputs -> TripId -> Graphql.Http.Request (Maybe UserTrip)
+sectionRequest section trip_id =
+    saveSectionMutation section trip_id
         |> Graphql.Http.mutationRequest Api.endpoint
 
 
@@ -83,6 +83,7 @@ saveEventMutation inputs trip_id section_id event_id =
                             , currency = fromMaybe form.currency
                             , notes = fromMaybe form.notes
                             , starts_at = fromMaybe form.starts_at
+                            , ends_at = fromMaybe form.ends_at
                             , duration = fromMaybe form.duration
                             , booked_through = fromMaybe form.booked_through
                             , confirmation = fromMaybe form.confirmation

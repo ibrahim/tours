@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Object.Cruise exposing (booked_through, cabin_number, cabin_type, carrier, confirmation, currency, day, duration, notes, price, section_id, snippets, starts_at, title, type_, uuid)
+module Tour.Object.Cruise exposing (booked_through, cabin_number, cabin_type, carrier, confirmation, currency, day, duration, ends_at, notes, price, section_id, snippets, starts_at, title, type_, uuid)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -62,6 +62,11 @@ day =
 duration : SelectionSet (Maybe Int) Tour.Object.Cruise
 duration =
     Object.selectionForField "(Maybe Int)" "duration" [] (Decode.int |> Decode.nullable)
+
+
+ends_at : SelectionSet (Maybe Float) Tour.Object.Cruise
+ends_at =
+    Object.selectionForField "(Maybe Float)" "ends_at" [] (Decode.float |> Decode.nullable)
 
 
 notes : SelectionSet (Maybe String) Tour.Object.Cruise

@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Object.Dining exposing (booked_through, confirmation, currency, day, duration, notes, price, provider, section_id, snippets, starts_at, title, type_, uuid)
+module Tour.Object.Dining exposing (booked_through, confirmation, currency, day, duration, ends_at, notes, price, provider, section_id, snippets, starts_at, title, type_, uuid)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -47,6 +47,11 @@ day =
 duration : SelectionSet (Maybe Int) Tour.Object.Dining
 duration =
     Object.selectionForField "(Maybe Int)" "duration" [] (Decode.int |> Decode.nullable)
+
+
+ends_at : SelectionSet (Maybe Float) Tour.Object.Dining
+ends_at =
+    Object.selectionForField "(Maybe Float)" "ends_at" [] (Decode.float |> Decode.nullable)
 
 
 notes : SelectionSet (Maybe String) Tour.Object.Dining

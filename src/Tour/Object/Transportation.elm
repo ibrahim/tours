@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Tour.Object.Transportation exposing (booked_through, carrier, confirmation, currency, day, duration, notes, phone_number, price, section_id, snippets, starts_at, title, type_, uuid)
+module Tour.Object.Transportation exposing (booked_through, carrier, confirmation, currency, day, duration, ends_at, notes, phone_number, price, section_id, snippets, starts_at, title, type_, uuid)
 
 import Graphql.Internal.Builder.Argument as Argument exposing (Argument)
 import Graphql.Internal.Builder.Object as Object
@@ -52,6 +52,11 @@ day =
 duration : SelectionSet (Maybe Int) Tour.Object.Transportation
 duration =
     Object.selectionForField "(Maybe Int)" "duration" [] (Decode.int |> Decode.nullable)
+
+
+ends_at : SelectionSet (Maybe Float) Tour.Object.Transportation
+ends_at =
+    Object.selectionForField "(Maybe Float)" "ends_at" [] (Decode.float |> Decode.nullable)
 
 
 notes : SelectionSet (Maybe String) Tour.Object.Transportation

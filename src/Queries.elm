@@ -130,6 +130,7 @@ activitySelection =
         |> with Tour.Object.Activity.notes
         |> with Tour.Object.Activity.currency
         |> with Tour.Object.Activity.starts_at
+        |> with Tour.Object.Activity.ends_at
         |> with Tour.Object.Activity.duration
         |> with Tour.Object.Activity.booked_through
         |> with Tour.Object.Activity.confirmation
@@ -146,6 +147,7 @@ lodgingSelection =
         |> with Tour.Object.Lodging.currency
         |> with Tour.Object.Lodging.notes
         |> with Tour.Object.Lodging.starts_at
+        |> with Tour.Object.Lodging.ends_at
         |> with Tour.Object.Lodging.duration
         |> with Tour.Object.Lodging.booked_through
         |> with Tour.Object.Lodging.confirmation
@@ -162,6 +164,7 @@ flightSelection =
         |> with Tour.Object.Flight.currency
         |> with Tour.Object.Flight.notes
         |> with Tour.Object.Flight.starts_at
+        |> with Tour.Object.Flight.ends_at
         |> with Tour.Object.Flight.duration
         |> with Tour.Object.Flight.booked_through
         |> with Tour.Object.Flight.confirmation
@@ -181,6 +184,7 @@ transportationSelection =
         |> with Tour.Object.Transportation.currency
         |> with Tour.Object.Transportation.notes
         |> with Tour.Object.Transportation.starts_at
+        |> with Tour.Object.Transportation.ends_at
         |> with Tour.Object.Transportation.duration
         |> with Tour.Object.Transportation.booked_through
         |> with Tour.Object.Transportation.confirmation
@@ -198,6 +202,7 @@ cruiseSelection =
         |> with Tour.Object.Cruise.currency
         |> with Tour.Object.Cruise.notes
         |> with Tour.Object.Cruise.starts_at
+        |> with Tour.Object.Cruise.ends_at
         |> with Tour.Object.Cruise.duration
         |> with Tour.Object.Cruise.booked_through
         |> with Tour.Object.Cruise.confirmation
@@ -226,6 +231,7 @@ diningSelection =
         |> with Tour.Object.Dining.currency
         |> with Tour.Object.Dining.notes
         |> with Tour.Object.Dining.starts_at
+        |> with Tour.Object.Dining.ends_at
         |> with Tour.Object.Dining.duration
         |> with Tour.Object.Dining.booked_through
         |> with Tour.Object.Dining.confirmation
