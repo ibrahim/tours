@@ -127,8 +127,8 @@ activitySelection =
         |> with Tour.Object.Activity.type_
         |> with Tour.Object.Activity.title
         |> with Tour.Object.Activity.price
-        |> with Tour.Object.Activity.notes
         |> with Tour.Object.Activity.currency
+        |> with Tour.Object.Activity.notes
         |> with Tour.Object.Activity.starts_at
         |> with Tour.Object.Activity.ends_at
         |> with Tour.Object.Activity.duration

@@ -1,23 +1,16 @@
 module Types exposing
-    ( ActivityFormFields
-    , Authentication(..)
-    , CruiseFormFields
-    , DiningFormFields
+    ( Authentication(..)
     , Endpoint
     , Event(..)
     , EventAttributes
     , EventForm
     , EventId
     , EventInputs(..)
-    , FlightFormFields
-    , InformationFormFields
-    , LodgingFormFields
     , RemoteGraphqlResponse
     , Response
     , Section
     , SectionId
     , SectionInputs(..)
-    , TransportationFormFields
     , Trip
     , TripId
     , TripWithEvents
@@ -107,117 +100,6 @@ type alias EventForm =
     , gate : Gate
     , cabin_type : CabinType
     , cabin_number : CabinNumber
-    , info_type : InfoType
-    }
-
-
-type alias ActivityFormFields =
-    { uuid : EventUuid
-    , title : Title
-    , section_id : SectionUuid
-    , event_type : EventType
-    , price : Price
-    , currency : Currency
-    , notes : Notes
-    , starts_at : StartsAt
-    , duration : Duration
-    , booked_through : BookedThrough
-    , confirmation : Confirmation
-    , provider : Provider
-    }
-
-
-type alias LodgingFormFields =
-    { uuid : EventUuid
-    , title : Title
-    , section_id : SectionUuid
-    , event_type : EventType
-    , price : Price
-    , currency : Currency
-    , notes : Notes
-    , starts_at : StartsAt
-    , duration : Duration
-    , booked_through : BookedThrough
-    , confirmation : Confirmation
-    }
-
-
-type alias TransportationFormFields =
-    { uuid : EventUuid
-    , title : Title
-    , section_id : SectionUuid
-    , event_type : EventType
-    , price : Price
-    , currency : Currency
-    , notes : Notes
-    , starts_at : StartsAt
-    , duration : Duration
-    , booked_through : BookedThrough
-    , confirmation : Confirmation
-    , carrier : Carrier
-    , phone_number : PhoneNumber
-    }
-
-
-type alias FlightFormFields =
-    { uuid : EventUuid
-    , title : Title
-    , section_id : SectionUuid
-    , event_type : EventType
-    , price : Price
-    , currency : Currency
-    , notes : Notes
-    , starts_at : StartsAt
-    , duration : Duration
-    , booked_through : BookedThrough
-    , confirmation : Confirmation
-    , airline : AirLine
-    , flight_number : FlightNumber
-    , terminal : Terminal
-    , gate : Gate
-    }
-
-
-type alias CruiseFormFields =
-    { uuid : EventUuid
-    , title : Title
-    , section_id : SectionUuid
-    , event_type : EventType
-    , price : Price
-    , currency : Currency
-    , notes : Notes
-    , starts_at : StartsAt
-    , duration : Duration
-    , booked_through : BookedThrough
-    , confirmation : Confirmation
-    , carrier : Carrier
-    , cabin_type : CabinType
-    , cabin_number : CabinNumber
-    }
-
-
-type alias DiningFormFields =
-    { uuid : EventUuid
-    , title : Title
-    , section_id : SectionUuid
-    , event_type : EventType
-    , price : Price
-    , currency : Currency
-    , notes : Notes
-    , starts_at : StartsAt
-    , duration : Duration
-    , booked_through : BookedThrough
-    , confirmation : Confirmation
-    , provider : Provider
-    }
-
-
-type alias InformationFormFields =
-    { uuid : EventUuid
-    , title : Title
-    , section_id : SectionUuid
-    , event_type : EventType
-    , notes : Notes
     , info_type : InfoType
     }
 

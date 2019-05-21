@@ -218,3 +218,6 @@
 .fa-attention:before {
   content: "\42";
 }
+.fa-clock:before {
+  content: "\43";
+}

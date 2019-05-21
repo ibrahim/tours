@@ -561,29 +561,29 @@ viewEventForm screen form trip problems =
         priceField =
             div [ class "field" ]
                 [ label [ class "label" ] [ text "Price" ]
-                , input
-                    [ class "input"
-                    , type_ "text"
-                    , placeholder "Price"
-                    , onInput (\o -> UpdateEventForm { form | price = String.toInt o })
-                    , value (Maybe.withDefault "" (Maybe.map String.fromInt form.price))
+                , div [ class "field has-addons" ]
+                    [ p [ class "control" ]
+                        [ span [ class "select" ]
+                            [ select
+                                [ onInput (\o -> UpdateEventForm { form | currency = Just o })
+                                ]
+                                [ option [ value "USD", selected (form.currency == Just "USD") ] [ text "$ USD" ]
+                                , option [ value "EUR", selected (form.currency == Just "EUR") ] [ text "€ EUR" ]
+                                , option [ value "GBP", selected (form.currency == Just "GBP") ] [ text "£ GBP" ]
+                                ]
+                            ]
+                        ]
+                    , p [ class "control  is-expanded" ]
+                        [ input
+                            [ class "input"
+                            , type_ "text"
+                            , placeholder "Price"
+                            , onInput (\o -> UpdateEventForm { form | price = String.toInt o })
+                            , value (Maybe.withDefault "" (Maybe.map String.fromInt form.price))
+                            ]
+                            []
+                        ]
                     ]
-                    []
-                ]
-
-        -- }}}
-        -- {{{ currencyField
-        currencyField =
-            div [ class "field" ]
-                [ label [ class "label" ] [ text "Currency" ]
-                , input
-                    [ class "input"
-                    , type_ "text"
-                    , placeholder "Currency"
-                    , onInput (\o -> UpdateEventForm { form | currency = Just o })
-                    , value (Maybe.withDefault "" form.currency)
-                    ]
-                    []
                 ]
 
         -- }}}
@@ -687,10 +687,10 @@ viewEventForm screen form trip problems =
         -- }}}
         -- {{{ starts_ends_at
         starts_ends_at =
-            div [ class "field" ]
-                [ div [ class "columns" ]
-                    [ div [ class "column is-half is-half-mobile" ] [ starts_atField ]
-                    , div [ class "column is-half is-half-mobile" ] [ ends_atField ]
+            div [ class "" ]
+                [ div [ class "field has-addons" ]
+                    [ div [ class "control is-expanded" ] [ starts_atField ]
+                    , div [ class "control is-expanded" ] [ ends_atField ]
                     ]
                 , div []
                     (List.map
@@ -710,16 +710,19 @@ viewEventForm screen form trip problems =
         starts_atField =
             div [ class "field" ]
                 [ label [ class "label" ] [ text "Starts At" ]
-                , input
-                    [ class "input time"
-                    , type_ "time"
-                    , onInput
-                        (\o ->
-                            UpdateEventForm { form | starts_at = String.toFloat <| String.replace ":" "." o }
-                        )
-                    , value <| log "starts val" (float_to_time_input form.starts_at)
+                , div [ class "control has-icons-left" ]
+                    [ input
+                        [ class "input time"
+                        , type_ "time"
+                        , onInput
+                            (\o ->
+                                UpdateEventForm { form | starts_at = String.toFloat <| String.replace ":" "." o }
+                            )
+                        , value <| log "starts val" (float_to_time_input form.starts_at)
+                        ]
+                        []
+                    , span [ class "icon is-left" ] [ i [ class "fas fa-clock" ] [] ]
                     ]
-                    []
                 ]
 
         -- }}}
@@ -727,16 +730,19 @@ viewEventForm screen form trip problems =
         ends_atField =
             div [ class "field" ]
                 [ label [ class "label" ] [ text "Ends At" ]
-                , input
-                    [ class "input time"
-                    , type_ "time"
-                    , onInput
-                        (\o ->
-                            UpdateEventForm { form | ends_at = String.toFloat <| String.replace ":" "." o }
-                        )
-                    , value <| log "end value " (float_to_time_input form.ends_at)
+                , div [ class "control has-icons-left" ]
+                    [ input
+                        [ class "input time"
+                        , type_ "time"
+                        , onInput
+                            (\o ->
+                                UpdateEventForm { form | ends_at = String.toFloat <| String.replace ":" "." o }
+                            )
+                        , value <| float_to_time_input form.ends_at
+                        ]
+                        []
+                    , span [ class "icon is-left" ] [ i [ class "fas fa-clock" ] [] ]
                     ]
-                    []
                 ]
 
         -- }}}
@@ -843,7 +849,6 @@ viewEventForm screen form trip problems =
                     div []
                         [ starts_ends_at
                         , priceField
-                        , currencyField
                         , notesField
                         , airlineField
                         , flight_numberField
@@ -855,7 +860,6 @@ viewEventForm screen form trip problems =
                     div []
                         [ starts_ends_at
                         , priceField
-                        , currencyField
                         , notesField
                         , booked_throughField
                         , confirmationField
@@ -866,7 +870,6 @@ viewEventForm screen form trip problems =
                     div []
                         [ starts_ends_at
                         , priceField
-                        , currencyField
                         , notesField
                         , booked_throughField
                         , confirmationField
@@ -877,7 +880,6 @@ viewEventForm screen form trip problems =
                     div []
                         [ starts_ends_at
                         , priceField
-                        , currencyField
                         , notesField
                         , booked_throughField
                         , confirmationField
@@ -889,7 +891,6 @@ viewEventForm screen form trip problems =
                     div []
                         [ starts_ends_at
                         , priceField
-                        , currencyField
                         , notesField
                         , booked_throughField
                         , confirmationField
@@ -903,7 +904,6 @@ viewEventForm screen form trip problems =
                         [ starts_ends_at
                         , durationField
                         , priceField
-                        , currencyField
                         , notesField
                         , booked_throughField
                         , confirmationField
