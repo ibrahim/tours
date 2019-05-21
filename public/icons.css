@@ -146,9 +146,6 @@
 .fa-cruise:before {
   content: "\e032";
 }
-.fa-info-circle:before {
-  content: "\e034";
-}
 .fa-arrow-down-right:before {
   content: "\e037";
 }
@@ -167,7 +164,7 @@
 .fa-paper-clip:before {
   content: "\e03d";
 }
-.fa-restaurant:before {
+.fa-dining:before {
   content: "\71";
 }
 .fa-activity:before {
@@ -208,4 +205,16 @@
 }
 .fa-flag:before {
   content: "\78";
+}
+.fa-information:before {
+  content: "\61";
+}
+.fa-info-circle:before {
+  content: "\7a";
+}
+.fa-lodging:before {
+  content: "\41";
+}
+.fa-attention:before {
+  content: "\42";
 }

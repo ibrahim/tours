@@ -11,7 +11,7 @@ import Html.Events exposing (onBlur, onClick, onInput, onSubmit)
 import Http
 import Mutations
 import Page exposing (header, layout)
-import Problem exposing (AppError(..), Problem(..), showProblems)
+import Problem exposing (AppError(..), Problem(..), ValidatedField(..), showProblems)
 import Queries
 import RemoteData exposing (RemoteData)
 import Route exposing (Route(..))
@@ -343,7 +343,27 @@ update msg model =
         --}}}
         --{{{UpdateEventForm
         UpdateEventForm event_form ->
-            ( { model | screen = EditEvent (Uuid event_form.uuid) event_form UnconfirmedDelete DetailsTab }, Cmd.none )
+            let
+                valid_ends_at =
+                    if not (event_form.starts_at == Nothing && event_form.ends_at == Nothing) then
+                        if Maybe.withDefault 0 event_form.starts_at > Maybe.withDefault 0 event_form.ends_at then
+                            [ Problem (InvalidEntry (ValidatedField "Starts At")) "Event start / end time are not valid" ]
+
+                        else
+                            []
+
+                    else
+                        []
+
+                problems =
+                    List.concat [ valid_ends_at ]
+            in
+            ( { model
+                | screen = EditEvent (Uuid event_form.uuid) event_form UnconfirmedDelete DetailsTab
+                , problems = problems
+              }
+            , Cmd.none
+            )
 
         --}}}
         --{{{SubmitSection
@@ -379,13 +399,26 @@ update msg model =
 
 view : Model -> { title : String, content : List (Html Msg) }
 view { trip, session, problems, screen } =
+    let
+        certain_problems =
+            List.filter
+                (\o ->
+                    case o of
+                        Problem (InvalidEntry _) _ ->
+                            False
+
+                        _ ->
+                            True
+                )
+                problems
+    in
     { title = "TourFax - Tour Planner"
     , content =
         Page.layout "Planner"
             [ div [ class "container" ]
                 [ div [ class "column is-three-fifths" ]
                     [ div []
-                        [ showProblems ClearProblems problems
+                        [ showProblems ClearProblems certain_problems
                         , div []
                             [ case session of
                                 LoggedIn _ viewer ->
@@ -398,7 +431,7 @@ view { trip, session, problems, screen } =
                                                             viewTrip screen trip
 
                                                         EditEvent event_id event_form _ _ ->
-                                                            viewEventForm screen event_form trip_
+                                                            viewEventForm screen event_form trip_ problems
 
                                                         ListByType event_type ->
                                                             viewTrip screen trip
@@ -448,8 +481,8 @@ view { trip, session, problems, screen } =
 -- {{{ viewEventForm
 
 
-viewEventForm : Screen -> EventForm -> TripWithEvents -> Html Msg
-viewEventForm screen form trip =
+viewEventForm : Screen -> EventForm -> TripWithEvents -> List Problem -> Html Msg
+viewEventForm screen form trip problems =
     let
         section =
             getSection (Uuid form.section_id) trip.sections
@@ -652,6 +685,27 @@ viewEventForm screen form trip =
                 ]
 
         -- }}}
+        -- {{{ starts_ends_at
+        starts_ends_at =
+            div [ class "field" ]
+                [ div [ class "columns" ]
+                    [ div [ class "column is-half is-half-mobile" ] [ starts_atField ]
+                    , div [ class "column is-half is-half-mobile" ] [ ends_atField ]
+                    ]
+                , div []
+                    (List.map
+                        (\o ->
+                            div [ class "warning-msg button is-warning is-outlined" ]
+                                [ span [ class "fas fa-attention has-text-warning" ] []
+                                , span [ class "has-text-grey" ] [ text o ]
+                                ]
+                        )
+                     <|
+                        problems_of "starts_at"
+                    )
+                ]
+
+        -- }}}
         -- {{{ starts_atField
         starts_atField =
             div [ class "field" ]
@@ -787,9 +841,7 @@ viewEventForm screen form trip =
             case form.event_type of
                 "Event::Flight" ->
                     div []
-                        [ starts_atField
-                        , ends_atField
-                        , durationField
+                        [ starts_ends_at
                         , priceField
                         , currencyField
                         , notesField
@@ -801,9 +853,7 @@ viewEventForm screen form trip =
 
                 "Event::Lodging" ->
                     div []
-                        [ starts_atField
-                        , ends_atField
-                        , durationField
+                        [ starts_ends_at
                         , priceField
                         , currencyField
                         , notesField
@@ -814,9 +864,7 @@ viewEventForm screen form trip =
 
                 "Event::Activity" ->
                     div []
-                        [ starts_atField
-                        , ends_atField
-                        , durationField
+                        [ starts_ends_at
                         , priceField
                         , currencyField
                         , notesField
@@ -827,9 +875,7 @@ viewEventForm screen form trip =
 
                 "Event::Transportation" ->
                     div []
-                        [ starts_atField
-                        , ends_atField
-                        , durationField
+                        [ starts_ends_at
                         , priceField
                         , currencyField
                         , notesField
@@ -841,9 +887,7 @@ viewEventForm screen form trip =
 
                 "Event::Cruise" ->
                     div []
-                        [ starts_atField
-                        , ends_atField
-                        , durationField
+                        [ starts_ends_at
                         , priceField
                         , currencyField
                         , notesField
@@ -856,8 +900,7 @@ viewEventForm screen form trip =
 
                 "Event::Dining" ->
                     div []
-                        [ starts_atField
-                        , ends_atField
+                        [ starts_ends_at
                         , durationField
                         , priceField
                         , currencyField
@@ -913,6 +956,20 @@ viewEventForm screen form trip =
 
                 _ ->
                     text ""
+
+        --}}}
+        --{{{problems_of
+        problems_of field =
+            let
+                collect_msg problem =
+                    case problem of
+                        Problem (InvalidEntry (ValidatedField field_)) err_msg ->
+                            [ err_msg ]
+
+                        _ ->
+                            []
+            in
+            List.concat <| List.map collect_msg problems
 
         --}}}
     in
