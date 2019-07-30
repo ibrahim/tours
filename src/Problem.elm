@@ -37,7 +37,14 @@ container deleteMsg content classes =
 viewProblem toMsg problem =
     case problem of
         Problem AuthenticationError message ->
-            container toMsg [ a [ href "#/login" ] [ text <| message ++ ". Click here to login." ] ] "is-danger"
+            container
+                toMsg
+                [ p []
+                    [ text <| message ++ ". "
+                    , a [ href "#/login" ] [ text <| "Click to sign-in." ]
+                    ]
+                ]
+                "is-danger"
 
         Problem (InvalidEntry (ValidatedField field)) message ->
             container toMsg [ p [] [ text <| field ++ ":" ++ message ] ] "is-warning"

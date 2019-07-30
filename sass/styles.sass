@@ -108,11 +108,19 @@ $cruise: $peach
   flex-flow: row
   .body
     padding: 0px 10px 40px 20px
+    .event-time
+      margin-top: 5px
+      display: flex
+      align-items: center
+      font: 700 14px Roboto
+      .fas
+        display: flex
+        align-items: center
+        margin: 0px 5px
     .event-title
       a
         display: flex
         font: 400 17px Roboto
-        margin-top: 5px
         color: #000!important
     .event-desc
       font: 300 15px Roboto
@@ -135,43 +143,64 @@ $cruise: $peach
       .icon
         color: #aaa
         font-size: 20px
-    .sign.activity
-      border: 2px solid #fff
-      background-color: $activity
-      .icon
-        color: #fff
-        font-size: 16px
-    .sign.flight
-      background-color: $flight
-      border: 2px solid #fff
-      .icon
-        color: #fff
-    .sign.dining
-      background-color: $dining
-      border: 2px solid #fff
-      .icon
-        color: #fff
-    .sign.lodging
-      background-color: $lodging
-      border: 2px solid #fff
-      .icon
-        color: #fff
-    .sign.transportation
-      background-color: $transportation
-      border: 2px solid #fff
-      .icon
-        color: #fff
-    .sign.cruise
-      background-color: $cruise
-      border: 2px solid #fff
-      .icon
-        color: #fff
-    .sign.information
-      background-color: $information
-      border: 2px solid #fff
-      .icon
-        color: #fff
 
+.event-full.activity
+  .event-time
+    color: $activity
+  .sign
+    border: 2px solid #fff
+    background-color: $activity
+    .icon
+      color: #fff
+      font-size: 16px
+.event-full.flight
+  .event-time
+    color: $flight
+  .sign  
+    background-color: $flight
+    border: 2px solid #fff
+    .icon
+      color: #fff
+.event-full.dining
+  .event-time
+    color: $dining
+  .sign
+    background-color: $dining
+    border: 2px solid #fff
+    .icon
+      color: #fff
+.event-full.lodging
+  .event-time
+    color: $lodging
+  .sign
+    background-color: $lodging
+    border: 2px solid #fff
+    .icon
+      color: #fff
+.event-full.transportation
+  .event-time
+    color: $transportation
+  .sign
+    background-color: $transportation
+    border: 2px solid #fff
+    .icon
+      color: #fff
+.event-full.cruise
+  .event-time
+    color: $cruise
+  .sign
+    background-color: $cruise
+    border: 2px solid #fff
+    .icon
+      color: #fff
+.event-full.information
+  .event-time
+    color: $information
+  .sign
+    background-color: $information
+    border: 2px solid #fff
+    .icon
+      color: #fff
 
 //}}}
 // {{{ Edit Event

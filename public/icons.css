@@ -221,3 +221,12 @@
 .fa-clock:before {
   content: "\43";
 }
+.fa-arrows-h:before {
+  content: "\44";
+}
+.fa-arrow-right:before {
+  content: "\45";
+}
+.fa-arrow-left:before {
+  content: "\46";
+}

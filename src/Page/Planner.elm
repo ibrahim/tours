@@ -495,54 +495,6 @@ viewEventForm screen form trip problems =
                 Nothing ->
                     "Section"
 
-        --{{{ float_to_time_input
-        float_to_time_input time_f =
-            let
-                lzero str =
-                    if String.length str == 1 then
-                        "0" ++ str
-
-                    else if str == "" then
-                        "00"
-
-                    else
-                        str
-
-                rzero str =
-                    if String.length str == 1 then
-                        str ++ "0"
-
-                    else if str == "" then
-                        "00"
-
-                    else
-                        str
-
-                hour_min_pair s =
-                    case s of
-                        [ a ] ->
-                            [ lzero a, "00" ]
-
-                        a :: b :: _ ->
-                            [ lzero a, rzero b ]
-
-                        [] ->
-                            [ "00", "00" ]
-
-                time_str =
-                    case Maybe.map String.fromFloat time_f of
-                        Just t ->
-                            t
-                                |> String.split "."
-                                |> hour_min_pair
-                                |> String.join ":"
-
-                        Nothing ->
-                            ""
-            in
-            time_str
-
-        --}}}
         -- {{{ notesField
         notesField =
             div [ class "field" ]
@@ -1144,13 +1096,21 @@ viewEventFull event =
     let
         event_name_ =
             String.toLower <| event_name event.event_type
+
+        event_time =
+            [ event.starts_at, event.ends_at ]
+                |> List.map (\o -> float_to_time_input o)
+                |> List.filter (\o -> not (o == ""))
+                |> List.map (\o -> span [] [ text o ])
+                |> List.intersperse (span [ class "fas fa-arrow-right" ] [])
     in
-    div [ class "event-full" ]
+    div [ class <| "event-full " ++ event_name_ ]
         [ div [ class "side" ]
-            [ span [ class <| "sign " ++ event_name_ ] [ span [ class <| "icon " ++ " fa-" ++ event_name_ ] [] ]
+            [ span [ class <| "sign " ] [ span [ class <| "icon " ++ " fa-" ++ event_name_ ] [] ]
             ]
         , div [ class "body" ]
-            [ div [ class "event-title" ]
+            [ div [ class "event-time" ] event_time
+            , div [ class "event-title" ]
                 [ a
                     [ href ""
                     , onClick <| ShowEvent (Uuid event.uuid)
@@ -1296,9 +1256,9 @@ viewTrip screen remote_response =
 
 --}}}
 -- {{{ eventsToRecords
--- eventsToRecords : List Event -> List EventForm
 
 
+event_to_record : Event -> EventForm
 event_to_record event =
     case event of
         Dining uuid section_id event_type title price currency notes starts_at ends_at duration booked_through confirmation provider ->
@@ -1477,6 +1437,7 @@ event_to_record event =
             }
 
 
+eventsToRecords : List Event -> List EventForm
 eventsToRecords events =
     List.map event_to_record events
 
@@ -1669,6 +1630,58 @@ createEventButton section_id =
 -- }}}
 -- Shared View
 -- {{{
+--{{{ float_to_time_input
+
+
+float_to_time_input time_f =
+    let
+        lzero str =
+            if String.length str == 1 then
+                "0" ++ str
+
+            else if str == "" then
+                "00"
+
+            else
+                str
+
+        rzero str =
+            if String.length str == 1 then
+                str ++ "0"
+
+            else if str == "" then
+                "00"
+
+            else
+                str
+
+        hour_min_pair s =
+            case s of
+                [ a ] ->
+                    [ lzero a, "00" ]
+
+                a :: b :: _ ->
+                    [ lzero a, rzero b ]
+
+                [] ->
+                    [ "00", "00" ]
+
+        time_str =
+            case Maybe.map String.fromFloat time_f of
+                Just t ->
+                    t
+                        |> String.split "."
+                        |> hour_min_pair
+                        |> String.join ":"
+
+                Nothing ->
+                    ""
+    in
+    time_str
+
+
+
+--}}}
 -- {{{ getSection
 
 

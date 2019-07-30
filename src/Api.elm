@@ -276,7 +276,7 @@ contains_str source httpError =
 
 httpErrors : List ( String, Problem )
 httpErrors =
-    [ ( "JWT", Problem AuthenticationError "Authentication Failed" )
+    [ ( "JWT", Problem AuthenticationError "Authentication Session has expired" )
     , ( "Mysql", Problem ServerError "Server Error" )
     ]
 

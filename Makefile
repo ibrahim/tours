@@ -3,6 +3,9 @@
 debug:
 	elm make src/Main.elm --output=public/main.js --debug
 
+serve:
+	http-server public/ -a localhost -c-1 -p 8000 -g --proxy http://localhost:5555
+
 build: elm-make compress
 
 elm-make:
